@@ -1,2 +1,4 @@
-# jgit
-An alternative git implementation for Chef
+jgit Cookbook
+=============
+Provides an alternative git implementation called 'jgit'
+
