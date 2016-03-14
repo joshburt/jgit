@@ -6,16 +6,24 @@
 # Note that changes in the inspected code, or installation of new
 # versions of RuboCop, may require this file to be generated again.
 
+################################################################################
+# We have a false positive in our code base so we disable this one
+################################################################################
 # Offense count: 1
 # Configuration parameters: AllowSafeAssignment.
 Lint/AssignmentInCondition:
   Exclude:
     - 'libraries/provider_jgit.rb'
 
+
 # Offense count: 8
 Metrics/AbcSize:
   Max: 31
 
+################################################################################
+# Error:
+#  C: Class has too many lines. [314/100]
+################################################################################
 # Offense count: 1
 # Configuration parameters: CountComments.
 Metrics/ClassLength:
@@ -25,12 +33,20 @@ Metrics/ClassLength:
 Metrics/CyclomaticComplexity:
   Max: 8
 
+################################################################################
+# Error:
+#  C: Line is too long. [120/80]
+################################################################################
 # Offense count: 55
 # Configuration parameters: AllowHeredoc, AllowURI, URISchemes.
 # URISchemes: http, https
 Metrics/LineLength:
   Max: 153
 
+################################################################################
+# Errors:
+# Method has too many lines.
+################################################################################
 # Offense count: 6
 # Configuration parameters: CountComments.
 Metrics/MethodLength:
@@ -39,14 +55,6 @@ Metrics/MethodLength:
 # Offense count: 1
 Metrics/PerceivedComplexity:
   Max: 8
-
-# Offense count: 1
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, SupportedStyles.
-# SupportedStyles: prefer_alias, prefer_alias_method
-Style/Alias:
-  Exclude:
-    - 'libraries/provider_jgit.rb'
 
 # Offense count: 1
 # Cop supports --auto-correct.
@@ -60,20 +68,3 @@ Style/BlockComments:
 Style/ConditionalAssignment:
   Exclude:
     - 'libraries/provider_jgit.rb'
-
-# Offense count: 1
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, SupportedStyles.
-# SupportedStyles: empty_lines, no_empty_lines
-Style/EmptyLinesAroundClassBody:
-  Exclude:
-    - 'libraries/provider_jgit.rb'
-
-# Offense count: 2
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, SupportedStyles.
-# SupportedStyles: final_newline, final_blank_line
-Style/TrailingBlankLines:
-  Exclude:
-    - 'libraries/provider_jgit.rb'
-    - 'metadata.rb'

@@ -26,7 +26,6 @@ class Chef
   class Provider
     # Provides an alternative git interface with some enhancements
     class JGit < Chef::Provider
-
       provides :jgit
 
       def whyrun_supported?
@@ -160,12 +159,7 @@ class Chef
         clone_cmd = "git fetch --no-tags origin #{build_standard_clone_args.join(' ')} \"#{@new_resource.revision}\""
         Chef::Log.info "> #{clone_cmd}"
 
-        fetch_status = shell_out!(clone_cmd, run_options(cwd: cwd, returns: [0, 1]))
-        case fetch_status.exitstatus
-        when 1
-          FileUtils.rm_rf(cwd) # clean up our mess
-          raise Chef::Exceptions::UnresolvableGitReference, 'Remote repository might not have uploadpack.allowReachableSHA1InWant set true'
-        end
+        shell_out!(clone_cmd, run_options(cwd: cwd, returns: [0, 1, 128]))
       end
 
       def build_lightweight_clone_base
@@ -174,9 +168,10 @@ class Chef
         Chef::Log.info "> #{clone_init_cmd}"
         shell_out!(clone_init_cmd, run_options)
 
-        clone_cmd = "git remote add origin \"#{@new_resource.repository}\""
-        Chef::Log.info "> #{clone_cmd}"
-        shell_out!(clone_cmd, run_options(cwd: cwd))
+        setup_remote_tracking_branches('origin', @new_resource.repository)
+        # clone_cmd = "git remote add origin \"#{@new_resource.repository}\""
+        # Chef::Log.info "> #{clone_cmd}"
+        # shell_out!(clone_cmd, run_options(cwd: cwd))
       end
 
       def clone_by_advertized_ref
@@ -192,6 +187,7 @@ class Chef
         args = []
         args << "-o #{remote}" unless remote == 'origin'
         args << "--depth #{@new_resource.depth}" if @new_resource.depth
+        args << "--recursive" if @new_resource.enable_submodules # https://git-scm.com/book/en/v2/Git-Tools-Submodules
         args
       end
 
@@ -208,11 +204,13 @@ class Chef
         end
       end
 
+      # Updated as per https://git-scm.com/book/en/v2/Git-Tools-Submodules
+      # Address https://github.com/chef/chef/issues/4126 (CHEF-4126)
       def enable_submodules
         if @new_resource.enable_submodules
           converge_by("enable git submodules for #{@new_resource}") do
             Chef::Log.info "#{@new_resource} synchronizing git submodules"
-            command = 'git submodule sync'
+            command = 'git submodule init'
             Chef::Log.info "> #{command}"
             shell_out!(command, run_options(cwd: cwd))
             Chef::Log.info "#{@new_resource} enabling git submodules"
@@ -243,30 +241,10 @@ class Chef
         fetch_command << " --depth #{@new_resource.depth}" if @new_resource.depth
 
         Chef::Log.info "> #{fetch_command}"
-        fetch_status = shell_out!(fetch_command, run_options(cwd: cwd, returns: [0, 1]))
-        case fetch_status.exitstatus
-        when 1
-          # Then the fetch failed.  Most likely cause if that the remote server does
-          # not have the uploadpack.allowReachableSHA1InWant set true on the remote end
-          raise Chef::Exceptions::UnresolvableGitReference, 'Remote repository might not have uploadpack.allowReachableSHA1InWant set true'
-        end
-
+        shell_out!(fetch_command, run_options(cwd: cwd, returns: [0, 1, 128]))
         fetch_command = "git reset --hard #{target_revision}"
         Chef::Log.info "> #{fetch_command}"
         shell_out!(fetch_command, run_options(cwd: cwd))
-=begin
-            fetch_command = "git repack --depth #{@new_resource.depth}"
-            Chef::Log.info "> #{fetch_command}"
-            shell_out!(fetch_command, run_options(:cwd => cwd))
-
-            fetch_command = "git gc --prune=all"
-            Chef::Log.info "> #{fetch_command}"
-            shell_out!(fetch_command, run_options(:cwd => cwd))
-
-            fetch_command = "git prune-packed"
-            Chef::Log.info "> #{fetch_command}"
-            shell_out!(fetch_command, run_options(:cwd => cwd))
-=end
       end
 
       def fetch_by_advertized_ref
@@ -331,7 +309,7 @@ class Chef
         end
       end
 
-      alias :revision_slug :target_revision
+      alias revision_slug target_revision
 
       def remote_resolve_reference
         Chef::Log.info("#{@new_resource} resolving remote reference")
