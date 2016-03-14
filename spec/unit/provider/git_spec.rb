@@ -17,24 +17,27 @@
 #
 
 require "spec_helper"
-describe Chef::Provider::Git do
+require './libraries/resource_jgit'
+require './libraries/provider_jgit'
+
+describe Chef::Provider::JGit do
 
   before(:each) do
     allow(STDOUT).to receive(:tty?).and_return(true)
     @original_log_level = Chef::Log.level
     Chef::Log.level = :info
 
-    @current_resource = Chef::Resource::Git.new("web2.0 app")
+    @current_resource = Chef::Resource::JGit.new("web2.0 app")
     @current_resource.revision("d35af14d41ae22b19da05d7d03a0bafc321b244c")
 
-    @resource = Chef::Resource::Git.new("web2.0 app")
+    @resource = Chef::Resource::JGit.new("web2.0 app")
     @resource.repository "git://github.com/opscode/chef.git"
     @resource.destination "/my/deploy/dir"
     @resource.revision "d35af14d41ae22b19da05d7d03a0bafc321b244c"
     @node = Chef::Node.new
     @events = Chef::EventDispatch::Dispatcher.new
     @run_context = Chef::RunContext.new(@node, {}, @events)
-    @provider = Chef::Provider::Git.new(@resource, @run_context)
+    @provider = Chef::Provider::JGit.new(@resource, @run_context)
     @provider.current_resource = @current_resource
   end
 

@@ -20,9 +20,10 @@ require "spec_helper"
 require "chef/mixin/shell_out"
 require "tmpdir"
 require "shellwords"
+require './libraries/resource_jgit'
 
 # Deploy relies heavily on symlinks, so it doesn't work on windows.
-describe Chef::Resource::Git, :requires_git => true do
+describe Chef::Resource::JGit, :requires_git => true do
   include Chef::Mixin::ShellOut
   let(:file_cache_path) { Dir.mktmpdir }
   # Some versions of git complains when the deploy directory is
@@ -104,7 +105,7 @@ E
     end
 
     it "clones a repository with a space in the path" do
-      Chef::Resource::Git.new(deploy_directory, run_context).tap do |r|
+      Chef::Resource::JGit.new(deploy_directory, run_context).tap do |r|
         r.repository "#{path_with_spaces}/example-repo.gitbundle"
       end.run_action(:sync)
     end
@@ -112,7 +113,7 @@ E
 
   context "when deploying from an annotated tag" do
     let(:basic_git_resource) do
-      Chef::Resource::Git.new(deploy_directory, run_context).tap do |r|
+      Chef::Resource::JGit.new(deploy_directory, run_context).tap do |r|
         r.repository origin_repo
         r.revision "v1.0.0"
       end
@@ -121,7 +122,7 @@ E
     # We create a copy of the basic_git_resource so that we can run
     # the resource again and verify that it doesn't update.
     let(:copy_git_resource) do
-      Chef::Resource::Git.new(deploy_directory, run_context).tap do |r|
+      Chef::Resource::JGit.new(deploy_directory, run_context).tap do |r|
         r.repository origin_repo
         r.revision "v1.0.0"
       end
@@ -150,7 +151,7 @@ E
 
   context "when deploying from a SHA revision" do
     let(:basic_git_resource) do
-      Chef::Resource::Git.new(deploy_directory, run_context).tap do |r|
+      Chef::Resource::JGit.new(deploy_directory, run_context).tap do |r|
         r.repository git_bundle_repo
       end
     end
@@ -158,7 +159,7 @@ E
     # We create a copy of the basic_git_resource so that we can run
     # the resource again and verify that it doesn't update.
     let(:copy_git_resource) do
-      Chef::Resource::Git.new(deploy_directory, run_context).tap do |r|
+      Chef::Resource::JGit.new(deploy_directory, run_context).tap do |r|
         r.repository origin_repo
       end
     end
@@ -191,7 +192,7 @@ E
 
   context "when deploying from a revision named 'HEAD'" do
     let(:basic_git_resource) do
-      Chef::Resource::Git.new(deploy_directory, run_context).tap do |r|
+      Chef::Resource::JGit.new(deploy_directory, run_context).tap do |r|
         r.repository origin_repo
         r.revision "HEAD"
       end
@@ -206,7 +207,7 @@ E
 
   context "when deploying from the default revision" do
     let(:basic_git_resource) do
-      Chef::Resource::Git.new(deploy_directory, run_context).tap do |r|
+      Chef::Resource::JGit.new(deploy_directory, run_context).tap do |r|
         r.repository origin_repo
         # use default
       end
@@ -226,14 +227,14 @@ E
     end
 
     let(:basic_git_resource) do
-      Chef::Resource::Git.new(deploy_directory, run_context).tap do |r|
+      Chef::Resource::JGit.new(deploy_directory, run_context).tap do |r|
         r.repository origin_repo
         r.revision "HEAD"
       end
     end
 
     let(:git_resource_default_rev) do
-      Chef::Resource::Git.new(deploy_directory, run_context).tap do |r|
+      Chef::Resource::JGit.new(deploy_directory, run_context).tap do |r|
         r.repository origin_repo
         # use default of revision
       end
