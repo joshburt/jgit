@@ -239,6 +239,7 @@ class Chef
 
         fetch_command = "git fetch origin #{target_revision}"
         fetch_command << " --depth #{@new_resource.depth}" if @new_resource.depth
+        fetch_command << " --prune" # https://github.com/chef/chef/issues/3929 (Resolves CHEF-3929)
 
         Chef::Log.info "> #{fetch_command}"
         shell_out!(fetch_command, run_options(cwd: cwd, returns: [0, 1, 128]))
@@ -250,10 +251,12 @@ class Chef
       def fetch_by_advertized_ref
         # since we're in a local branch already, just reset to specified revision rather than merge
         fetch_command = "git fetch #{@new_resource.remote}"
+        fetch_command << " --prune" # https://github.com/chef/chef/issues/3929 (Resolves CHEF-3929)
         fetch_command << " --depth #{@new_resource.depth}" if @new_resource.depth
 
         fetch_command << " && git fetch #{@new_resource.remote}"
         fetch_command << " --depth #{@new_resource.depth}" if @new_resource.depth
+        fetch_command << " --prune" # https://github.com/chef/chef/issues/3929 (Resolves CHEF-3929)
 
         fetch_command << " --tags && git reset --hard #{target_revision}"
         Chef::Log.info "Fetching updates from #{new_resource.remote} and resetting to revision #{target_revision}"
