@@ -100,7 +100,7 @@ describe Chef::Provider::JGit do
       @resource.revision "v1.0"
       @stdout = ("d03c22a5e41f5ae3193460cca044ed1435029f53\trefs/heads/0.8-alpha\n" +
                  "503c22a5e41f5ae3193460cca044ed1435029f53\trefs/heads/v1.0\n")
-      expect(@provider).to receive(:shell_out!).with(@git_ls_remote + "\"v1.0*\"", { :log_tag => "git[web2.0 app]" }).and_return(double("ShellOut result", :stdout => @stdout))
+      expect(@provider).to receive(:shell_out!).with(@git_ls_remote + "\"v1.0*\"", { :log_tag => "jgit[web2.0 app]" }).and_return(double("ShellOut result", :stdout => @stdout))
       expect(@provider.target_revision).to eql("503c22a5e41f5ae3193460cca044ed1435029f53")
     end
 
@@ -109,7 +109,7 @@ describe Chef::Provider::JGit do
       @stdout = ("d03c22a5e41f5ae3193460cca044ed1435029f53\trefs/heads/0.8-alpha\n" +
                  "503c22a5e41f5ae3193460cca044ed1435029f53\trefs/heads/v1.0\n" +
                  "663c22a5e41f5ae3193460cca044ed1435029f53\trefs/heads/v1.0^{}\n")
-      expect(@provider).to receive(:shell_out!).with(@git_ls_remote + "\"v1.0*\"", { :log_tag => "git[web2.0 app]" }).and_return(double("ShellOut result", :stdout => @stdout))
+      expect(@provider).to receive(:shell_out!).with(@git_ls_remote + "\"v1.0*\"", { :log_tag => "jgit[web2.0 app]" }).and_return(double("ShellOut result", :stdout => @stdout))
       expect(@provider.target_revision).to eql("663c22a5e41f5ae3193460cca044ed1435029f53")
     end
 
@@ -118,7 +118,7 @@ describe Chef::Provider::JGit do
       @stdout = ("d03c22a5e41f5ae3193460cca044ed1435029f53\trefs/heads/0.8-alpha\n" +
                  "663c22a5e41f5ae3193460cca044ed1435029f53\trefs/tags/releases/v1.0\n" +
                  "503c22a5e41f5ae3193460cca044ed1435029f53\trefs/tags/v1.0\n")
-      expect(@provider).to receive(:shell_out!).with(@git_ls_remote + "\"v1.0*\"", { :log_tag => "git[web2.0 app]" }).and_return(double("ShellOut result", :stdout => @stdout))
+      expect(@provider).to receive(:shell_out!).with(@git_ls_remote + "\"v1.0*\"", { :log_tag => "jgit[web2.0 app]" }).and_return(double("ShellOut result", :stdout => @stdout))
       expect(@provider.target_revision).to eql("503c22a5e41f5ae3193460cca044ed1435029f53")
     end
 
@@ -127,7 +127,7 @@ describe Chef::Provider::JGit do
       @stdout = ("d03c22a5e41f5ae3193460cca044ed1435029f53\trefs/heads/0.8-alpha\n" +
           "663c22a5e41f5ae3193460cca044ed1435029f53\trefs/tags/v1.0\n" +
           "503c22a5e41f5ae3193460cca044ed1435029f53\trefs/heads/v1.0\n")
-      expect(@provider).to receive(:shell_out!).with(@git_ls_remote + "\"v1.0*\"", { :log_tag => "git[web2.0 app]" }).and_return(double("ShellOut result", :stdout => @stdout))
+      expect(@provider).to receive(:shell_out!).with(@git_ls_remote + "\"v1.0*\"", { :log_tag => "jgit[web2.0 app]" }).and_return(double("ShellOut result", :stdout => @stdout))
       expect(@provider.target_revision).to eql("663c22a5e41f5ae3193460cca044ed1435029f53")
     end
 
@@ -136,7 +136,7 @@ describe Chef::Provider::JGit do
       @stdout = ("d03c22a5e41f5ae3193460cca044ed1435029f53\trefs/heads/0.8-alpha\n" +
           "663c22a5e41f5ae3193460cca044ed1435029f53\trefs/tags/v1.1\n" +
           "503c22a5e41f5ae3193460cca044ed1435029f53\trefs/heads/v1.0\n")
-      expect(@provider).to receive(:shell_out!).with(@git_ls_remote + "\"v1.0*\"", { :log_tag => "git[web2.0 app]" }).and_return(double("ShellOut result", :stdout => @stdout))
+      expect(@provider).to receive(:shell_out!).with(@git_ls_remote + "\"v1.0*\"", { :log_tag => "jgit[web2.0 app]" }).and_return(double("ShellOut result", :stdout => @stdout))
       expect(@provider.target_revision).to eql("503c22a5e41f5ae3193460cca044ed1435029f53")
     end
 
@@ -146,7 +146,7 @@ describe Chef::Provider::JGit do
           "663c22a5e41f5ae3193460cca044ed1435029f53\trefs/tags/v1.0\n" +
           "805c22a5e41f5ae3193460cca044ed1435029f53\trefs/pulls/v1.0\n" +
           "503c22a5e41f5ae3193460cca044ed1435029f53\trefs/heads/v1.0\n")
-      expect(@provider).to receive(:shell_out!).with(@git_ls_remote + "\"refs/pulls/v1.0*\"", { :log_tag => "git[web2.0 app]" }).and_return(double("ShellOut result", :stdout => @stdout))
+      expect(@provider).to receive(:shell_out!).with(@git_ls_remote + "\"refs/pulls/v1.0*\"", { :log_tag => "jgit[web2.0 app]" }).and_return(double("ShellOut result", :stdout => @stdout))
       expect(@provider.target_revision).to eql("805c22a5e41f5ae3193460cca044ed1435029f53")
     end
 
@@ -155,7 +155,7 @@ describe Chef::Provider::JGit do
       @stdout = ("d03c22a5e41f5ae3193460cca044ed1435029f53\trefs/heads/0.8-alpha\n" +
           "663c22a5e41f5ae3193460cca044ed1435029f53\trefs/tags/v1.0\n" +
           "503c22a5e41f5ae3193460cca044ed1435029f53\trefs/heads/v1.0\n")
-      expect(@provider).to receive(:shell_out!).with(@git_ls_remote + "\"refs/heads/v1.0*\"", { :log_tag => "git[web2.0 app]" }).and_return(double("ShellOut result", :stdout => @stdout))
+      expect(@provider).to receive(:shell_out!).with(@git_ls_remote + "\"refs/heads/v1.0*\"", { :log_tag => "jgit[web2.0 app]" }).and_return(double("ShellOut result", :stdout => @stdout))
       expect(@provider.target_revision).to eql("503c22a5e41f5ae3193460cca044ed1435029f53")
     end
 
@@ -184,7 +184,7 @@ describe Chef::Provider::JGit do
     it "does not raise an error when the revision is valid and assertions are run." do
       @resource.revision "0.8-alpha"
       @stdout = "503c22a5e41f5ae3193460cca044ed1435029f53\trefs/heads/0.8-alpha\n"
-      expect(@provider).to receive(:shell_out!).with(@git_ls_remote + "\"0.8-alpha*\"", { :log_tag => "git[web2.0 app]" }).and_return(double("ShellOut result", :stdout => @stdout))
+      expect(@provider).to receive(:shell_out!).with(@git_ls_remote + "\"0.8-alpha*\"", { :log_tag => "jgit[web2.0 app]" }).and_return(double("ShellOut result", :stdout => @stdout))
       @provider.action = :checkout
       allow(::File).to receive(:directory?).with("/my/deploy").and_return(true)
       @provider.define_resource_requirements
@@ -209,7 +209,7 @@ b7d19519a1c15f1c1a324e2683bd728b6198ce5a\trefs/tags/0.7.8^{}
 ebc1b392fe7e8f0fbabc305c299b4d365d2b4d9b\trefs/tags/chef-server-package
 SHAS
       @resource.revision ""
-      expect(@provider).to receive(:shell_out!).with(@git_ls_remote + "\"HEAD\"", { :log_tag => "git[web2.0 app]" }).and_return(double("ShellOut result", :stdout => @stdout))
+      expect(@provider).to receive(:shell_out!).with(@git_ls_remote + "\"HEAD\"", { :log_tag => "jgit[web2.0 app]" }).and_return(double("ShellOut result", :stdout => @stdout))
       expect(@provider.target_revision).to eql("28af684d8460ba4793eda3e7ac238c864a5d029a")
     end
   end
@@ -226,7 +226,7 @@ SHAS
       {
         :user => deploy_user,
         :environment => { "GIT_SSH" => wrapper, "HOME" => "/home/deployNinja" },
-        :log_tag => "git[web2.0 app]",
+        :log_tag => "jgit[web2.0 app]",
       }
     end
     before do
@@ -256,7 +256,7 @@ SHAS
         {
           :user => deploy_user,
           :environment => { "GIT_SSH" => wrapper, "HOME" => "/home/masterNinja" },
-          :log_tag => "git[web2.0 app]",
+          :log_tag => "jgit[web2.0 app]",
         }
       end
       before do
