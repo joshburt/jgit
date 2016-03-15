@@ -25,7 +25,7 @@ describe Chef::Resource::JGit do
   static_provider_resolution(
     resource: Chef::Resource::JGit,
     provider: Chef::Provider::JGit,
-    name: :git,
+    name: :jgit,
     action: :sync
   )
 
