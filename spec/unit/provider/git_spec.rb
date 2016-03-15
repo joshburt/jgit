@@ -277,9 +277,10 @@ SHAS
     @resource.ssh_wrapper "do_it_this_way.sh"
     expected_cmd = "git clone  \"git://github.com/opscode/chef.git\" \"/Application Support/with/space\""
     expect(@provider).to receive(:shell_out!).with(expected_cmd, :user => "deployNinja",
-                                                                 :environment => { "GIT_SSH" => "do_it_this_way.sh",
-                                                                                   "HOME" => "/home/deployNinja" },
-                                                                 :log_tag => "git[web2.0 app]")
+                                                                 :log_tag => "jgit[web2.0 app]",
+                                                                 :environment => { "HOME" => "/home/deployNinja",
+                                                                                   "GIT_SSH" => "do_it_this_way.sh" }
+                                                                 )
     @provider.clone
   end
 
@@ -289,8 +290,8 @@ SHAS
     version_response = double("shell_out")
     allow(version_response).to receive(:stdout) { "git version 1.7.9" }
     expect(@provider).to receive(:shell_out!).with("git --version",
-                                               :log_tag => "git[web2.0 app]").and_return(version_response)
-    expect(@provider).to receive(:shell_out!).with(expected_cmd, :log_tag => "git[web2.0 app]")
+                                               :log_tag => "jgit[web2.0 app]").and_return(version_response)
+    expect(@provider).to receive(:shell_out!).with(expected_cmd, :log_tag => "jgit[web2.0 app]")
     @provider.clone
   end
 
@@ -300,33 +301,33 @@ SHAS
     version_response = double("shell_out")
     allow(version_response).to receive(:stdout) { "git version 1.7.10" }
     expect(@provider).to receive(:shell_out!).with("git --version",
-                                               :log_tag => "git[web2.0 app]").and_return(version_response)
-    expect(@provider).to receive(:shell_out!).with(expected_cmd, :log_tag => "git[web2.0 app]")
+                                               :log_tag => "jgit[web2.0 app]").and_return(version_response)
+    expect(@provider).to receive(:shell_out!).with(expected_cmd, :log_tag => "jgit[web2.0 app]")
     @provider.clone
   end
 
   it "compiles a clone command with a remote other than ``origin''" do
     @resource.remote "opscode"
     expected_cmd = "git clone -o opscode \"git://github.com/opscode/chef.git\" \"/my/deploy/dir\""
-    expect(@provider).to receive(:shell_out!).with(expected_cmd, :log_tag => "git[web2.0 app]")
+    expect(@provider).to receive(:shell_out!).with(expected_cmd, :log_tag => "jgit[web2.0 app]")
     @provider.clone
   end
 
   it "runs a checkout command with default options" do
     expect(@provider).to receive(:shell_out!).with("git branch -f deploy d35af14d41ae22b19da05d7d03a0bafc321b244c", :cwd => "/my/deploy/dir",
-                                                                                                                    :log_tag => "git[web2.0 app]").ordered
+                                                                                                                    :log_tag => "jgit[web2.0 app]").ordered
     expect(@provider).to receive(:shell_out!).with("git checkout deploy", :cwd => "/my/deploy/dir",
-                                                                          :log_tag => "git[web2.0 app]").ordered
+                                                                          :log_tag => "jgit[web2.0 app]").ordered
     @provider.checkout
   end
 
   it "runs an enable_submodule command" do
     @resource.enable_submodules true
-    expected_cmd = "git submodule sync"
+    expected_cmd = "git submodule init"
     expect(@provider).to receive(:shell_out!).with(expected_cmd, :cwd => "/my/deploy/dir",
-                                                                 :log_tag => "git[web2.0 app]")
+                                                                 :log_tag => "jgit[web2.0 app]")
     expected_cmd = "git submodule update --init --recursive"
-    expect(@provider).to receive(:shell_out!).with(expected_cmd, :cwd => "/my/deploy/dir", :log_tag => "git[web2.0 app]")
+    expect(@provider).to receive(:shell_out!).with(expected_cmd, :cwd => "/my/deploy/dir", :log_tag => "jgit[web2.0 app]")
     @provider.enable_submodules
   end
 
@@ -338,7 +339,7 @@ SHAS
   it "runs a sync command with default options" do
     expect(@provider).to receive(:setup_remote_tracking_branches).with(@resource.remote, @resource.repository)
     expected_cmd = "git fetch origin && git fetch origin --tags && git reset --hard d35af14d41ae22b19da05d7d03a0bafc321b244c"
-    expect(@provider).to receive(:shell_out!).with(expected_cmd, :cwd => "/my/deploy/dir", :log_tag => "git[web2.0 app]")
+    expect(@provider).to receive(:shell_out!).with(expected_cmd, :cwd => "/my/deploy/dir", :log_tag => "jgit[web2.0 app]")
     @provider.fetch_updates
   end
 
@@ -350,7 +351,7 @@ SHAS
     expected_cmd = "git fetch origin && git fetch origin --tags && git reset --hard d35af14d41ae22b19da05d7d03a0bafc321b244c"
     expect(@provider).to receive(:shell_out!).with(expected_cmd, :cwd => "/my/deploy/dir",
                                                                  :user => "whois", :group => "thisis",
-                                                                 :log_tag => "git[web2.0 app]",
+                                                                 :log_tag => "jgit[web2.0 app]",
                                                                  :environment => { "HOME" => "/home/whois" })
     @provider.fetch_updates
   end
@@ -359,7 +360,7 @@ SHAS
     @resource.remote "origin"
     expect(@provider).to receive(:setup_remote_tracking_branches).with(@resource.remote, @resource.repository)
     fetch_command = "git fetch origin && git fetch origin --tags && git reset --hard d35af14d41ae22b19da05d7d03a0bafc321b244c"
-    expect(@provider).to receive(:shell_out!).with(fetch_command, :cwd => "/my/deploy/dir", :log_tag => "git[web2.0 app]")
+    expect(@provider).to receive(:shell_out!).with(fetch_command, :cwd => "/my/deploy/dir", :log_tag => "jgit[web2.0 app]")
     @provider.fetch_updates
   end
 
@@ -367,7 +368,7 @@ SHAS
     @resource.remote "opscode"
     expect(@provider).to receive(:setup_remote_tracking_branches).with(@resource.remote, @resource.repository)
     fetch_command = "git fetch opscode && git fetch opscode --tags && git reset --hard d35af14d41ae22b19da05d7d03a0bafc321b244c"
-    expect(@provider).to receive(:shell_out!).with(fetch_command, :cwd => "/my/deploy/dir", :log_tag => "git[web2.0 app]")
+    expect(@provider).to receive(:shell_out!).with(fetch_command, :cwd => "/my/deploy/dir", :log_tag => "jgit[web2.0 app]")
     @provider.fetch_updates
   end
 
@@ -379,12 +380,12 @@ SHAS
       expected_command = "git config --get remote.#{@resource.remote}.url"
       expect(@provider).to receive(:shell_out!).with(expected_command,
                                                  :cwd => "/my/deploy/dir",
-                                                 :log_tag => "git[web2.0 app]",
+                                                 :log_tag => "jgit[web2.0 app]",
                                                  :returns => [0, 1, 2]).and_return(command_response)
       add_remote_command = "git remote add #{@resource.remote} #{@resource.repository}"
       expect(@provider).to receive(:shell_out!).with(add_remote_command,
                                                  :cwd => "/my/deploy/dir",
-                                                 :log_tag => "git[web2.0 app]")
+                                                 :log_tag => "jgit[web2.0 app]")
       @provider.setup_remote_tracking_branches(@resource.remote, @resource.repository)
     end
 
@@ -397,7 +398,7 @@ SHAS
       expected_command = "git config --get remote.#{@resource.remote}.url"
       expect(@provider).to receive(:shell_out!).with(expected_command,
                                                  :cwd => "/my/deploy/dir",
-                                                 :log_tag => "git[web2.0 app]",
+                                                 :log_tag => "jgit[web2.0 app]",
                                                  :user => "whois",
                                                  :group => "thisis",
                                                  :environment => { "HOME" => "/home/whois" },
@@ -405,7 +406,7 @@ SHAS
       add_remote_command = "git remote add #{@resource.remote} #{@resource.repository}"
       expect(@provider).to receive(:shell_out!).with(add_remote_command,
                                                  :cwd => "/my/deploy/dir",
-                                                 :log_tag => "git[web2.0 app]",
+                                                 :log_tag => "jgit[web2.0 app]",
                                                  :user => "whois",
                                                  :group => "thisis",
                                                  :environment => { "HOME" => "/home/whois" })
@@ -419,12 +420,12 @@ SHAS
         check_remote_command = "git config --get remote.#{@resource.remote}.url"
         expect(@provider).to receive(:shell_out!).with(check_remote_command,
                                                    :cwd => "/my/deploy/dir",
-                                                   :log_tag => "git[web2.0 app]",
+                                                   :log_tag => "jgit[web2.0 app]",
                                                    :returns => [0, 1, 2]).and_return(command_response)
         expected_command = "git remote add #{@resource.remote} #{@resource.repository}"
         expect(@provider).to receive(:shell_out!).with(expected_command,
                                                    :cwd => "/my/deploy/dir",
-                                                   :log_tag => "git[web2.0 app]")
+                                                   :log_tag => "jgit[web2.0 app]")
         @provider.setup_remote_tracking_branches(@resource.remote, @resource.repository)
       end
     end
@@ -437,12 +438,12 @@ SHAS
         check_remote_command = "git config --get remote.#{@resource.remote}.url"
         expect(@provider).to receive(:shell_out!).with(check_remote_command,
                                                    :cwd => "/my/deploy/dir",
-                                                   :log_tag => "git[web2.0 app]",
+                                                   :log_tag => "jgit[web2.0 app]",
                                                    :returns => [0, 1, 2]).and_return(command_response)
         expected_command = "git config --replace-all remote.#{@resource.remote}.url #{@resource.repository}"
         expect(@provider).to receive(:shell_out!).with(expected_command,
                                                    :cwd => "/my/deploy/dir",
-                                                   :log_tag => "git[web2.0 app]")
+                                                   :log_tag => "jgit[web2.0 app]")
         @provider.setup_remote_tracking_branches(@resource.remote, @resource.repository)
       end
 
@@ -453,12 +454,12 @@ SHAS
         check_remote_command = "git config --get remote.#{@resource.remote}.url"
         expect(@provider).to receive(:shell_out!).with(check_remote_command,
                                                    :cwd => "/my/deploy/dir",
-                                                   :log_tag => "git[web2.0 app]",
+                                                   :log_tag => "jgit[web2.0 app]",
                                                    :returns => [0, 1, 2]).and_return(command_response)
         unexpected_command = "git config --replace-all remote.#{@resource.remote}.url #{@resource.repository}"
         expect(@provider).not_to receive(:shell_out!).with(unexpected_command,
                                                        :cwd => "/my/deploy/dir",
-                                                       :log_tag => "git[web2.0 app]")
+                                                       :log_tag => "jgit[web2.0 app]")
         @provider.setup_remote_tracking_branches(@resource.remote, @resource.repository)
       end
 
@@ -468,12 +469,12 @@ SHAS
         check_remote_command = "git config --get remote.#{@resource.remote}.url"
         expect(@provider).to receive(:shell_out!).with(check_remote_command,
                                                    :cwd => "/my/deploy/dir",
-                                                   :log_tag => "git[web2.0 app]",
+                                                   :log_tag => "jgit[web2.0 app]",
                                                    :returns => [0, 1, 2]).and_return(command_response)
         expected_command = "git config --replace-all remote.#{@resource.remote}.url #{@resource.repository}"
         expect(@provider).to receive(:shell_out!).with(expected_command,
                                                    :cwd => "/my/deploy/dir",
-                                                   :log_tag => "git[web2.0 app]")
+                                                   :log_tag => "jgit[web2.0 app]")
         @provider.setup_remote_tracking_branches(@resource.remote, @resource.repository)
       end
     end
