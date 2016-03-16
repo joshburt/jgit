@@ -41,12 +41,8 @@ class Chef
         )
       end
 
-      # Introduced in git 2.5
-      # uploadpack.allowReachableSHA1InWant::
-      #   Allow `upload-pack` to accept a fetch request that asks for an
-      #   object that is reachable from any ref tip. However, note that
-      #   calculating object reachability is computationally expensive.
-      #   Defaults to `false`.
+      # Introduced in git 2.5 // uploadpack.allowReachableSHA1InWant
+      # https://github.com/git/git/blob/v2.5.0/Documentation/config.txt#L2570
       def uploadpack_allow_reachable_sha1_in_want(arg = nil)
         set_or_return(
           :uploadpack_allow_reachable_sha1_in_want,
