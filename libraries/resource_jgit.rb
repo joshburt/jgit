@@ -18,7 +18,6 @@
 #
 
 require 'chef/resource/scm'
-require './libraries/provider_jgit'
 
 class Chef
   class Resource
