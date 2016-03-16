@@ -338,8 +338,10 @@ SHAS
 
   it "runs a sync command with default options" do
     expect(@provider).to receive(:setup_remote_tracking_branches).with(@resource.remote, @resource.repository)
-    expected_cmd = "git fetch origin --prune && git fetch origin --prune --tags && git reset --hard d35af14d41ae22b19da05d7d03a0bafc321b244c"
-    expect(@provider).to receive(:shell_out!).with(expected_cmd, :cwd => "/my/deploy/dir", :log_tag => "jgit[web2.0 app]")
+    expected1_cmd = "git fetch origin --tags --prune"
+    expected2_cmd = "git reset --hard d35af14d41ae22b19da05d7d03a0bafc321b244c"
+    expect(@provider).to receive(:shell_out!).with(expected1_cmd, :cwd => "/my/deploy/dir", :log_tag => "jgit[web2.0 app]")
+    expect(@provider).to receive(:shell_out!).with(expected2_cmd, :cwd => "/my/deploy/dir", :log_tag => "jgit[web2.0 app]")
     @provider.fetch_updates
   end
 
