@@ -6,15 +6,6 @@
 # Note that changes in the inspected code, or installation of new
 # versions of RuboCop, may require this file to be generated again.
 
-################################################################################
-# We have a false positive in our code base so we disable this one
-################################################################################
-# Offense count: 1
-# Configuration parameters: AllowSafeAssignment.
-Lint/AssignmentInCondition:
-  Exclude:
-    - 'libraries/provider_jgit.rb'
-
 
 # Offense count: 8
 Metrics/AbcSize:
