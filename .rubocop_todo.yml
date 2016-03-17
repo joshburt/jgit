@@ -6,8 +6,6 @@
 # Note that changes in the inspected code, or installation of new
 # versions of RuboCop, may require this file to be generated again.
 
-
-# Offense count: 8
 Metrics/AbcSize:
   Max: 31
 
@@ -15,12 +13,10 @@ Metrics/AbcSize:
 # Error:
 #  C: Class has too many lines. [314/100]
 ################################################################################
-# Offense count: 1
 # Configuration parameters: CountComments.
 Metrics/ClassLength:
   Max: 314
 
-# Offense count: 1
 Metrics/CyclomaticComplexity:
   Max: 8
 
@@ -28,7 +24,6 @@ Metrics/CyclomaticComplexity:
 # Error:
 #  C: Line is too long. [120/80]
 ################################################################################
-# Offense count: 55
 # Configuration parameters: AllowHeredoc, AllowURI, URISchemes.
 # URISchemes: http, https
 Metrics/LineLength:
@@ -38,11 +33,9 @@ Metrics/LineLength:
 # Errors:
 # Method has too many lines.
 ################################################################################
-# Offense count: 6
 # Configuration parameters: CountComments.
 Metrics/MethodLength:
   Max: 23
 
-# Offense count: 1
 Metrics/PerceivedComplexity:
   Max: 8
