@@ -350,27 +350,36 @@ SHAS
     allow(Etc).to receive(:getpwnam).and_return(double("Struct::Passwd", :name => @resource.user, :dir => "/home/whois"))
     @resource.group("thisis")
     expect(@provider).to receive(:setup_remote_tracking_branches).with(@resource.remote, @resource.repository)
-    expected_cmd = "git fetch origin --prune && git fetch origin --prune --tags && git reset --hard d35af14d41ae22b19da05d7d03a0bafc321b244c"
-    expect(@provider).to receive(:shell_out!).with(expected_cmd, :cwd => "/my/deploy/dir",
+    expected1_cmd = "git fetch origin --tags --prune"
+    expected2_cmd = "git reset --hard d35af14d41ae22b19da05d7d03a0bafc321b244c"
+    expect(@provider).to receive(:shell_out!).with(expected1_cmd, :cwd => "/my/deploy/dir",
                                                                  :user => "whois", :group => "thisis",
                                                                  :log_tag => "jgit[web2.0 app]",
                                                                  :environment => { "HOME" => "/home/whois" })
+    expect(@provider).to receive(:shell_out!).with(expected2_cmd, :cwd => "/my/deploy/dir",
+                                                   :user => "whois", :group => "thisis",
+                                                   :log_tag => "jgit[web2.0 app]",
+                                                   :environment => { "HOME" => "/home/whois" })
     @provider.fetch_updates
   end
 
   it "configures remote tracking branches when remote is ``origin''" do
     @resource.remote "origin"
     expect(@provider).to receive(:setup_remote_tracking_branches).with(@resource.remote, @resource.repository)
-    fetch_command = "git fetch origin --prune && git fetch origin --prune --tags && git reset --hard d35af14d41ae22b19da05d7d03a0bafc321b244c"
-    expect(@provider).to receive(:shell_out!).with(fetch_command, :cwd => "/my/deploy/dir", :log_tag => "jgit[web2.0 app]")
+    fetch1_command = "git fetch origin --tags --prune"
+    fetch2_command = "git reset --hard d35af14d41ae22b19da05d7d03a0bafc321b244c"
+    expect(@provider).to receive(:shell_out!).with(fetch1_command, :cwd => "/my/deploy/dir", :log_tag => "jgit[web2.0 app]")
+    expect(@provider).to receive(:shell_out!).with(fetch2_command, :cwd => "/my/deploy/dir", :log_tag => "jgit[web2.0 app]")
     @provider.fetch_updates
   end
 
   it "configures remote tracking branches when remote is not ``origin''" do
     @resource.remote "opscode"
     expect(@provider).to receive(:setup_remote_tracking_branches).with(@resource.remote, @resource.repository)
-    fetch_command = "git fetch opscode --prune && git fetch opscode --prune --tags && git reset --hard d35af14d41ae22b19da05d7d03a0bafc321b244c"
-    expect(@provider).to receive(:shell_out!).with(fetch_command, :cwd => "/my/deploy/dir", :log_tag => "jgit[web2.0 app]")
+    fetch1_command = "git fetch opscode --tags --prune"
+    fetch2_command = "git reset --hard d35af14d41ae22b19da05d7d03a0bafc321b244c"
+    expect(@provider).to receive(:shell_out!).with(fetch1_command, :cwd => "/my/deploy/dir", :log_tag => "jgit[web2.0 app]")
+    expect(@provider).to receive(:shell_out!).with(fetch2_command, :cwd => "/my/deploy/dir", :log_tag => "jgit[web2.0 app]")
     @provider.fetch_updates
   end
 
