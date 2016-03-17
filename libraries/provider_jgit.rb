@@ -35,7 +35,10 @@ class Chef
       def load_current_resource
         @resolved_reference = nil
         @current_resource = Chef::Resource::JGit.new(@new_resource.name)
-        @current_resource.revision ||= find_current_revision
+
+        current_revision = find_current_revision
+        @current_resource.revision current_revision if current_revision
+
         # TODO: reenable and fix tests ..
         # @current_resource.uploadpack_allow_reachable_sha1_in_want true if git_minor_version >= Gem::Version.new('2.5.0')
       end
@@ -327,11 +330,8 @@ class Chef
         # Using such a degenerate annotated tag would be very
         # confusing. We avoid the issue by disallowing the use of
         # annotated tags named 'HEAD'.
-        if rev_search_pattern != 'HEAD'
-          found = find_revision(refs, @new_resource.revision, '^{}')
-        else
-          found = refs_search(refs, 'HEAD')
-        end
+
+        found = rev_search_pattern != 'HEAD' ? find_revision(refs, @new_resource.revision, '^{}') : refs_search(refs, 'HEAD')
         found = find_revision(refs, @new_resource.revision) if found.empty?
         found.size == 1 ? found.first[0] : nil
       end
@@ -344,11 +344,7 @@ class Chef
       end
 
       def rev_match_pattern(prefix, revision)
-        if revision.start_with?(prefix)
-          revision
-        else
-          prefix + revision
-        end
+        revision.start_with?(prefix) ? revision : prefix + revision
       end
 
       def rev_search_pattern

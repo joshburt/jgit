@@ -55,16 +55,3 @@ Metrics/MethodLength:
 # Offense count: 1
 Metrics/PerceivedComplexity:
   Max: 8
-
-# Offense count: 1
-# Cop supports --auto-correct.
-#Style/BlockComments:
-#  Exclude:
-#    - 'libraries/provider_jgit.rb'
-
-# Offense count: 2
-# Cop supports --auto-correct.
-# Configuration parameters: SingleLineConditionsOnly.
-Style/ConditionalAssignment:
-  Exclude:
-    - 'libraries/provider_jgit.rb'
