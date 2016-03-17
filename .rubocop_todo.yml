@@ -58,9 +58,9 @@ Metrics/PerceivedComplexity:
 
 # Offense count: 1
 # Cop supports --auto-correct.
-Style/BlockComments:
-  Exclude:
-    - 'libraries/provider_jgit.rb'
+#Style/BlockComments:
+#  Exclude:
+#    - 'libraries/provider_jgit.rb'
 
 # Offense count: 2
 # Cop supports --auto-correct.

@@ -35,10 +35,9 @@ class Chef
       def load_current_resource
         @resolved_reference = nil
         @current_resource = Chef::Resource::JGit.new(@new_resource.name)
-        if current_revision = find_current_revision
-          @current_resource.revision current_revision
-        end
-        #@current_resource.uploadpack_allow_reachable_sha1_in_want true if git_minor_version >= Gem::Version.new('2.5.0')
+        @current_resource.revision ||= find_current_revision
+        # TODO: reenable and fix tests ..
+        # @current_resource.uploadpack_allow_reachable_sha1_in_want true if git_minor_version >= Gem::Version.new('2.5.0')
       end
 
       def define_resource_requirements
@@ -142,16 +141,17 @@ class Chef
 
       def clone
         converge_by("clone from #{@new_resource.repository} into #{cwd}") do
-          # uploadpack.allowReachableSHA1InWant support introduced in git 2.5.0
           if @new_resource.uploadpack_allow_reachable_sha1_in_want && (git_minor_version >= Gem::Version.new('2.5.0'))
-            clone_by_commitid
+            # Introduced in git 2.5 // uploadpack.allowReachableSHA1InWant
+            # https://github.com/git/git/blob/v2.5.0/Documentation/config.txt#L2570
+            clone_by_any_ref
           else
             clone_by_advertized_ref
           end
         end
       end
 
-      def clone_by_commitid
+      def clone_by_any_ref
         Chef::Log.info "#{@new_resource} cloning [shallow] repo #{@new_resource.repository} to #{cwd}"
 
         # build out the empty base
@@ -171,9 +171,6 @@ class Chef
         shell_out!(clone_init_cmd, run_options)
 
         setup_remote_tracking_branches('origin', @new_resource.repository)
-        # clone_cmd = "git remote add origin \"#{@new_resource.repository}\""
-        # Chef::Log.info "> #{clone_cmd}"
-        # shell_out!(clone_cmd, run_options(cwd: cwd))
       end
 
       def clone_by_advertized_ref
@@ -245,7 +242,8 @@ class Chef
         Chef::Log.info "Fetching [shallow] updates from #{new_resource.remote} and resetting to revision #{target_revision}"
 
         fetch_args = "--depth #{@new_resource.depth}" if @new_resource.depth
-        fetch_command = git(%(fetch --prune #{fetch_args} origin #{target_revision})) # prune added: https://github.com/chef/chef/issues/3929 (Resolves CHEF-3929)
+        # prune added: https://github.com/chef/chef/issues/3929 (Resolves CHEF-3929)
+        fetch_command = git(%(fetch --prune #{fetch_args} origin #{target_revision}))
 
         Chef::Log.info "> #{fetch_command}"
         shell_out!(fetch_command, run_options(cwd: cwd, returns: [0, 1, 128]))
@@ -257,11 +255,11 @@ class Chef
 
       def fetch_by_advertized_ref
         # since we're in a local branch already, just reset to specified revision rather than merge
-
         Chef::Log.info "Fetching updates from #{new_resource.remote} and resetting to revision #{target_revision}"
 
         fetch_args = "--depth #{@new_resource.depth}" if @new_resource.depth
-        fetch_command = git(%(fetch #{@new_resource.remote} --tags --prune #{fetch_args})) # prune added: https://github.com/chef/chef/issues/3929 (Resolves CHEF-3929)
+        # prune added: https://github.com/chef/chef/issues/3929 (Resolves CHEF-3929)
+        fetch_command = git(%(fetch #{@new_resource.remote} --tags --prune #{fetch_args}))
         Chef::Log.info "> #{fetch_command}"
         shell_out!(fetch_command, run_options(cwd: cwd))
 
@@ -272,7 +270,7 @@ class Chef
 
       def setup_remote_tracking_branches(remote_name, remote_url)
         converge_by("set up remote tracking branches for #{remote_url} at #{remote_name}") do
-          Chef::Log.info "#{@new_resource} configuring remote tracking branches for repository #{remote_url} " + "at remote #{remote_name}"
+          Chef::Log.info "#{@new_resource} configuring remote tracking branches for repository #{remote_url} at remote #{remote_name}"
           check_remote_command = git(%(config --get remote.#{remote_name}.url))
           Chef::Log.info "> #{check_remote_command}"
           remote_status = shell_out!(check_remote_command, run_options(cwd: cwd, returns: [0, 1, 2]))
