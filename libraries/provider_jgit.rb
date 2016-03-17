@@ -307,13 +307,7 @@ class Chef
       end
 
       def target_revision
-        @target_revision ||= begin
-          if sha_hash?(@new_resource.revision)
-            @target_revision = @new_resource.revision
-          else
-            @target_revision = remote_resolve_reference
-          end
-        end
+        @target_revision ||= sha_hash?(@new_resource.revision) ? @new_resource.revision : remote_resolve_reference
       end
 
       alias revision_slug target_revision
