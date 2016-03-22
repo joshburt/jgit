@@ -107,9 +107,8 @@ class Chef
       end
 
       def git_minor_version
-        version_command = git(%(--version))
-        Chef::Log.info "> #{version_command}"
-        @git_minor_version ||= Gem::Version.new(shell_out!(version_command, run_options).stdout.split.last)
+        git_result = git_standard_executor [ '--version' ]
+        @git_minor_version ||= Gem::Version.new(git_result.stdout.split.last)
       end
 
       def existing_git_clone?
@@ -124,11 +123,10 @@ class Chef
         Chef::Log.info("#{@new_resource} finding current git revision")
         if ::File.exist?(::File.join(cwd, '.git'))
           # 128 is returned when we're not in a git repo. this is fine
-          rev_parse_command = git(%(rev-parse HEAD))
-          Chef::Log.info "> #{rev_parse_command}"
-          result = shell_out!(rev_parse_command, cwd: cwd, returns: [0, 128]).stdout.strip
+          rev_parse_result = git_standard_executor([ 'rev-parse', 'HEAD' ], {cwd: cwd, returns: [0, 128]})
+          rev = rev_parse_result.stdout.strip
         end
-        sha_hash?(result) ? result : nil
+        sha_hash?(rev) ? rev : nil
       end
 
       def add_remotes
@@ -160,29 +158,34 @@ class Chef
         # build out the empty base
         build_lightweight_clone_base
 
+        standard_args = build_standard_clone_args
         # build our light weight fetch command
-        fetch_args = build_standard_clone_args
+        fetch_args = []
+        fetch_args << @new_resource.revision
+        fetch_args << standard_args if standard_args.length > 0
         fetch_args << '--no-tags'
-        git_fetch(@new_resource.revision, fetch_args)
+        git_fetch('origin', fetch_args)
       end
 
       def build_lightweight_clone_base
-        # Make the local git repository
-        clone_init_cmd = git(%(init \"#{cwd}\"))
-        Chef::Log.info "> #{clone_init_cmd}"
-        shell_out!(clone_init_cmd, run_options)
-
+        # Creates a light weight local git repository
+        clone_init_cmd = []
+        clone_init_cmd << 'init'
+        clone_init_cmd << "\"#{cwd}\""
+        git_standard_executor clone_init_cmd
         setup_remote_tracking_branches('origin', @new_resource.repository)
       end
 
       def clone_by_advertized_ref
-        args = build_standard_clone_args
-        args << '--no-single-branch' if @new_resource.depth && (git_minor_version >= Gem::Version.new('1.7.10'))
+        git_clone_by_advertized_ref_cmd = []
+        git_clone_by_advertized_ref_cmd << 'clone'
+        git_clone_by_advertized_ref_cmd << build_standard_clone_args
+        git_clone_by_advertized_ref_cmd << '--no-single-branch' if @new_resource.depth && (git_minor_version >= Gem::Version.new('1.7.10'))
+        git_clone_by_advertized_ref_cmd << "\"#{@new_resource.repository}\""
+        git_clone_by_advertized_ref_cmd << "\"#{@new_resource.destination}\""
 
         Chef::Log.info "#{@new_resource} cloning repo #{@new_resource.repository} to #{@new_resource.destination}"
-        clone_cmd = git(%(clone #{args.join(' ')} \"#{@new_resource.repository}\" \"#{@new_resource.destination}\"))
-        Chef::Log.info "> #{clone_cmd}"
-        shell_out!(clone_cmd, run_options)
+        git_standard_executor git_clone_by_advertized_ref_cmd
       end
 
       def build_standard_clone_args
@@ -199,13 +202,20 @@ class Chef
 
         converge_by("checkout ref #{sha_ref} branch #{@new_resource.revision}") do
           # checkout into a local branch rather than a detached HEAD
-          branch_command = git(%(branch -f #{@new_resource.checkout_branch} #{sha_ref}))
-          Chef::Log.info "> #{branch_command}"
-          shell_out!(branch_command, run_options(cwd: cwd))
+          # git_branch_command = []
+          # git_branch_command << 'branch'
+          # git_branch_command << '-f'
+          # git_branch_command << @new_resource.checkout_branch
+          # git_branch_command << sha_ref
+          # git_standard_executor(git_branch_command, {cwd: cwd})
+          git_standard_executor([ 'branch', '-f', @new_resource.checkout_branch, sha_ref ], {cwd: cwd})
 
-          checkout_command = git(%(checkout #{@new_resource.checkout_branch}))
-          Chef::Log.info "> #{checkout_command}"
-          shell_out!(checkout_command, run_options(cwd: cwd))
+          # git_checkout_command = []
+          # git_checkout_command << 'checkout'
+          # git_checkout_command << @new_resource.checkout_branch
+          # git_standard_executor(git_checkout_command, {cwd: cwd})
+          git_standard_executor([ 'checkout', @new_resource.checkout_branch ], {cwd: cwd})
+
           Chef::Log.info "#{@new_resource} checked out branch: #{@new_resource.revision} onto: #{@new_resource.checkout_branch} reference: #{sha_ref}"
         end
       end
@@ -216,14 +226,19 @@ class Chef
         if @new_resource.enable_submodules
           converge_by("enable git submodules for #{@new_resource}") do
             Chef::Log.info "#{@new_resource} synchronizing git submodules"
-            command = git(%(submodule init))
-            Chef::Log.info "> #{command}"
-            shell_out!(command, run_options(cwd: cwd))
+            git_submodule_init_command = []
+            git_submodule_init_command << 'submodule'
+            git_submodule_init_command << 'init'
+            git_standard_executor(git_submodule_init_command, {cwd: cwd})
+
             Chef::Log.info "#{@new_resource} enabling git submodules"
             # the --recursive flag means we require git 1.6.5+ now, see CHEF-1827
-            command = git(%(submodule update --init --recursive))
-            Chef::Log.info "> #{command}"
-            shell_out!(command, run_options(cwd: cwd))
+            git_submodule_enable_command = []
+            git_submodule_enable_command << 'submodule'
+            git_submodule_enable_command << 'update'
+            git_submodule_enable_command << '--init'
+            git_submodule_enable_command << '--recursive'
+            git_standard_executor(git_submodule_enable_command, {cwd: cwd})
           end
         end
       end
@@ -256,7 +271,8 @@ class Chef
         Chef::Log.info "Fetching updates from #{new_resource.remote} and resetting to revision #{target_revision}"
 
         fetch_args = []
-        fetch_args << '--tags --prune' # prune added: https://github.com/chef/chef/issues/3929 (Resolves CHEF-3929)
+        fetch_args << '--tags'
+        fetch_args << '--prune' # prune added: https://github.com/chef/chef/issues/3929 (Resolves CHEF-3929)
         fetch_args << "--depth #{@new_resource.depth}" if @new_resource.depth
 
         git_fetch(@new_resource.remote, fetch_args)
@@ -264,23 +280,31 @@ class Chef
       end
 
       def git_fetch(fetch_source, args = [])
-        fetch_command = git(%(fetch #{fetch_source} #{args.join(' ')}))
-        Chef::Log.info "> #{fetch_command}"
-        shell_out!(fetch_command, run_options(cwd: cwd, returns: [0, 1, 128]))
+        git_fetch_command = []
+        git_fetch_command << 'fetch'
+        git_fetch_command << fetch_source
+        git_fetch_command << args if args.length > 0
+        git_standard_executor(git_fetch_command, {cwd: cwd, returns: [0, 1, 128]})
       end
 
       def git_reset_hard(args = [])
-        reset_command = git(%(reset #{args.join(' ')} --hard #{target_revision}))
-        Chef::Log.info "> #{reset_command}"
-        shell_out!(reset_command, run_options(cwd: cwd))
+        git_reset_command = []
+        git_reset_command << 'reset'
+        git_reset_command << args if args.length > 0
+        git_reset_command << '--hard'
+        git_reset_command << target_revision
+        git_standard_executor(git_reset_command, {cwd: cwd})
       end
 
       def setup_remote_tracking_branches(remote_name, remote_url)
         converge_by("set up remote tracking branches for #{remote_url} at #{remote_name}") do
           Chef::Log.info "#{@new_resource} configuring remote tracking branches for repository #{remote_url} at remote #{remote_name}"
-          check_remote_command = git(%(config --get remote.#{remote_name}.url))
-          Chef::Log.info "> #{check_remote_command}"
-          remote_status = shell_out!(check_remote_command, run_options(cwd: cwd, returns: [0, 1, 2]))
+          # check_remote_command = git(%(config --get remote.#{remote_name}.url))
+          check_remote_command = []
+          check_remote_command << 'config'
+          check_remote_command << '--get'
+          check_remote_command << "remote.#{remote_name}.url"
+          remote_status = git_standard_executor(check_remote_command, {cwd: cwd, returns: [0, 1, 2]})
           case remote_status.exitstatus
           when 0, 2
             # * Status 0 means that we already have a remote with this name, so we should update the url
@@ -289,14 +313,20 @@ class Chef
             #   which we can fix by replacing them all with our target url (hence the --replace-all option)
 
             if multiple_remotes?(remote_status) || !remote_matches?(remote_url, remote_status)
-              update_remote_url_command = git(%(config --replace-all remote.#{remote_name}.url #{remote_url}))
-              Chef::Log.info "> #{update_remote_url_command}"
-              shell_out!(update_remote_url_command, run_options(cwd: cwd))
+              git_update_remote_url_command = []
+              git_update_remote_url_command << 'config'
+              git_update_remote_url_command << '--replace-all'
+              git_update_remote_url_command << "remote.#{remote_name}.url"
+              git_update_remote_url_command << remote_url
+              git_standard_executor(git_update_remote_url_command, {cwd: cwd})
             end
           when 1
-            add_remote_command = git(%(remote add #{remote_name} #{remote_url}))
-            Chef::Log.info "> #{add_remote_command}"
-            shell_out!(add_remote_command, run_options(cwd: cwd))
+            git_add_remote_command = []
+            git_add_remote_command << 'remote'
+            git_add_remote_command << 'add'
+            git_add_remote_command << remote_name
+            git_add_remote_command << remote_url
+            git_standard_executor(git_add_remote_command, {cwd: cwd})
           end
         end
       end
@@ -360,9 +390,12 @@ class Chef
       end
 
       def git_ls_remote(rev_pattern)
-        command = git(%(ls-remote "#{@new_resource.repository}" "#{rev_pattern}"))
-        Chef::Log.info "> #{command}"
-        shell_out!(command, run_options).stdout
+        git_ls_remote_command = []
+        git_ls_remote_command << 'ls-remote'
+        git_ls_remote_command << "\"#{@new_resource.repository}\""
+        git_ls_remote_command << "\"#{rev_pattern}\""
+        stdout_obj = git_standard_executor git_ls_remote_command
+        stdout_obj.stdout
       end
 
       def refs_search(refs, pattern)
@@ -399,7 +432,13 @@ class Chef
       end
 
       def git(*args)
-        ['git', *args].compact.join(' ').rstrip
+        ['git', *args].compact.join(' ')
+      end
+
+      def git_standard_executor(args, run_opts = {})
+        git_command = git(args)
+        Chef::Log.info "> #{git_command}"
+        shell_out!(git_command, run_options(run_opts))
       end
 
       def sha_hash?(string)
