@@ -147,17 +147,17 @@ class Chef
 
           run_opts = { cwd: cwd }
           case remote_status.exitstatus
-            when 0, 2
-              # * Status 0 means that we already have a remote with this name, so we should update the url
-              #   if it doesn't match the url we want.
-              # * Status 2 means that we have multiple urls assigned to the same remote (not a good idea)
-              #   which we can fix by replacing them all with our target url (hence the --replace-all option)
+          when 0, 2
+            # * Status 0 means that we already have a remote with this name, so we should update the url
+            #   if it doesn't match the url we want.
+            # * Status 2 means that we have multiple urls assigned to the same remote (not a good idea)
+            #   which we can fix by replacing them all with our target url (hence the --replace-all option)
 
-              if multiple_remotes?(remote_status) || !remote_matches?(remote_url, remote_status)
-                git_standard_executor(['config', '--replace-all', "remote.#{remote_name}.url", remote_url], run_opts)
-              end
-            when 1
-              git_standard_executor(['remote', 'add', remote_name, remote_url], run_opts)
+            if multiple_remotes?(remote_status) || !remote_matches?(remote_url, remote_status)
+              git_standard_executor(['config', '--replace-all', "remote.#{remote_name}.url", remote_url], run_opts)
+            end
+          when 1
+            git_standard_executor(['remote', 'add', remote_name, remote_url], run_opts)
           end
         end
       end
@@ -184,26 +184,38 @@ class Chef
       private
 
       def run_options(run_opts = {})
+        run_opts[:group] = @new_resource.group if @new_resource.group
+        run_opts[:log_tag] = @new_resource.to_s
+        run_opts[:timeout] = @new_resource.timeout if @new_resource.timeout
+        run_opts[:user] = @new_resource.user if @new_resource.user
+        run_env = run_options_env
+        run_opts[:environment] = run_env unless run_env.empty?
+        run_opts
+      end
+
+      def run_options_env
         env = {}
+        env_home = process_executor_home
+        env['HOME'] = env_home unless env_home.nil?
+        env['GIT_SSH'] = @new_resource.ssh_wrapper if @new_resource.ssh_wrapper
+        env.merge!(@new_resource.environment) if @new_resource.environment
+        env
+      end
+
+      def process_executor_home
+        env_home = nil
         if @new_resource.user
-          run_opts[:user] = @new_resource.user
           # Certain versions of `git` misbehave if git configuration is
           # inaccessible in $HOME. We need to ensure $HOME matches the
           # user who is executing `git` not the user running Chef.
-          env['HOME'] = begin
+          env_home = begin
             require 'etc'
             Etc.getpwnam(@new_resource.user).dir
           rescue ArgumentError # user not found
             raise Chef::Exceptions::User, "Could not determine HOME for specified user '#{@new_resource.user}' for resource '#{@new_resource.name}'"
           end
         end
-        run_opts[:group] = @new_resource.group if @new_resource.group
-        env['GIT_SSH'] = @new_resource.ssh_wrapper if @new_resource.ssh_wrapper
-        run_opts[:log_tag] = @new_resource.to_s
-        run_opts[:timeout] = @new_resource.timeout if @new_resource.timeout
-        env.merge!(@new_resource.environment) if @new_resource.environment
-        run_opts[:environment] = env unless env.empty?
-        run_opts
+        env_home
       end
 
       def cwd
@@ -216,7 +228,7 @@ class Chef
 
       def git_standard_executor(args, run_opts = {})
         git_command = git(args)
-        Chef::Log.info "> #{git_command}"
+        Chef::Log.debug "> #{git_command}"
         shell_out!(git_command, run_options(run_opts))
       end
 
@@ -326,8 +338,7 @@ class Chef
 
         standard_args = build_standard_clone_args
         # build our light weight fetch command
-        fetch_args = []
-        fetch_args << @new_resource.revision
+        fetch_args = [@new_resource.revision]
         fetch_args << standard_args unless standard_args.empty?
         fetch_args << '--no-tags'
         git_fetch('origin', fetch_args)
@@ -335,16 +346,13 @@ class Chef
 
       def build_lightweight_clone_base
         # Creates a light weight local git repository
-        clone_init_cmd = []
-        clone_init_cmd << 'init'
-        clone_init_cmd << "\"#{cwd}\""
+        clone_init_cmd = ['init', "\"#{cwd}\""]
         git_standard_executor clone_init_cmd
         setup_remote_tracking_branches('origin', @new_resource.repository)
       end
 
       def clone_by_advertized_ref
-        git_clone_by_advertized_ref_cmd = []
-        git_clone_by_advertized_ref_cmd << 'clone'
+        git_clone_by_advertized_ref_cmd = ['clone']
         git_clone_by_advertized_ref_cmd << build_standard_clone_args
         git_clone_by_advertized_ref_cmd << '--no-single-branch' if @new_resource.depth && (git_minor_version >= Gem::Version.new('1.7.10'))
         git_clone_by_advertized_ref_cmd << "\"#{@new_resource.repository}\""
@@ -366,9 +374,7 @@ class Chef
       def fetch_by_any_ref
         Chef::Log.info "Fetching [shallow] updates from #{new_resource.remote} and resetting to revision #{target_revision}"
 
-        fetch_args = []
-        fetch_args << target_revision
-        fetch_args << '--prune' # prune added: https://github.com/chef/chef/issues/3929 (Resolves CHEF-3929)
+        fetch_args = [target_revision, '--prune'] # prune added: https://github.com/chef/chef/issues/3929 (Resolves CHEF-3929)
         fetch_args << "--depth #{@new_resource.depth}" if @new_resource.depth
         git_fetch('origin', fetch_args)
         git_reset_hard
@@ -378,9 +384,7 @@ class Chef
         # since we're in a local branch already, just reset to specified revision rather than merge
         Chef::Log.info "Fetching updates from #{new_resource.remote} and resetting to revision #{target_revision}"
 
-        fetch_args = []
-        fetch_args << '--tags'
-        fetch_args << '--prune' # prune added: https://github.com/chef/chef/issues/3929 (Resolves CHEF-3929)
+        fetch_args = ['--tags', '--prune'] # prune added: https://github.com/chef/chef/issues/3929 (Resolves CHEF-3929)
         fetch_args << "--depth #{@new_resource.depth}" if @new_resource.depth
 
         git_fetch(@new_resource.remote, fetch_args)
@@ -388,17 +392,14 @@ class Chef
       end
 
       def git_fetch(fetch_source, args = [])
-        git_fetch_command = []
-        git_fetch_command << 'fetch'
-        git_fetch_command << fetch_source
+        git_fetch_command = ['fetch', fetch_source]
         git_fetch_command << args unless args.empty?
         run_opts = { cwd: cwd, returns: [0, 1, 128] }
         git_standard_executor(git_fetch_command, run_opts)
       end
 
       def git_reset_hard(args = [])
-        git_reset_command = []
-        git_reset_command << 'reset'
+        git_reset_command = ['reset']
         git_reset_command << args unless args.empty?
         git_reset_command << '--hard'
         git_reset_command << target_revision
@@ -409,7 +410,6 @@ class Chef
       def current_revision_matches_target_revision?
         !@current_resource.revision.nil? && (target_revision.strip.to_i(16) == @current_resource.revision.strip.to_i(16))
       end
-
     end
   end
 end
