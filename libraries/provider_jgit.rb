@@ -38,9 +38,6 @@ class Chef
 
         current_revision = find_current_revision
         @current_resource.revision current_revision if current_revision
-
-        # TODO: reenable and fix tests ..
-        # @current_resource.uploadpack_allow_reachable_sha1_in_want true if git_minor_version >= Gem::Version.new('2.5.0')
       end
 
       def define_resource_requirements
