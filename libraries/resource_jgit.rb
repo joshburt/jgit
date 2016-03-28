@@ -18,7 +18,6 @@
 #
 
 require 'chef/resource/scm'
-require './libraries/provider_jgit'
 
 class Chef
   class Resource
@@ -30,7 +29,6 @@ class Chef
         super
         @resource_name = :jgit
         @additional_remotes = Hash[]
-        @uploadpack_allow_reachable_sha1_in_want = false
       end
 
       def additional_remotes(arg = nil)
@@ -38,20 +36,6 @@ class Chef
           :additional_remotes,
           arg,
           kind_of: Hash
-        )
-      end
-
-      # Introduced in git 2.5
-      # uploadpack.allowReachableSHA1InWant::
-      #   Allow `upload-pack` to accept a fetch request that asks for an
-      #   object that is reachable from any ref tip. However, note that
-      #   calculating object reachability is computationally expensive.
-      #   Defaults to `false`.
-      def uploadpack_allow_reachable_sha1_in_want(arg = nil)
-        set_or_return(
-          :uploadpack_allow_reachable_sha1_in_want,
-          arg,
-          kind_of: [TrueClass, FalseClass]
         )
       end
 
