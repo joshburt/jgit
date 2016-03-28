@@ -370,7 +370,8 @@ class Chef
 
       def fetch_by_any_ref
         Chef::Log.info "Fetching [shallow] updates from #{new_resource.remote} and resetting to revision #{target_revision}"
-        fetch_args = [target_revision]
+
+        fetch_args = [target_revision, '--prune'] # prune added: https://github.com/chef/chef/issues/3929 (Resolves CHEF-3929)
         fetch_args << "--depth #{@new_resource.depth}" if @new_resource.depth
         git_fetch('origin', fetch_args)
         git_reset_hard
@@ -380,7 +381,7 @@ class Chef
         # since we're in a local branch already, just reset to specified revision rather than merge
         Chef::Log.info "Fetching updates from #{new_resource.remote} and resetting to revision #{target_revision}"
 
-        fetch_args = ['--tags']
+        fetch_args = ['--tags', '--prune'] # prune added: https://github.com/chef/chef/issues/3929 (Resolves CHEF-3929)
         fetch_args << "--depth #{@new_resource.depth}" if @new_resource.depth
 
         git_fetch(@new_resource.remote, fetch_args)
