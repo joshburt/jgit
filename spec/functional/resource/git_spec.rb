@@ -21,6 +21,8 @@ require "chef/mixin/shell_out"
 require "tmpdir"
 require "shellwords"
 require './libraries/resource_jgit'
+require './libraries/provider_jgit'
+
 
 # Deploy relies heavily on symlinks, so it doesn't work on windows.
 describe Chef::Resource::JGit, :requires_git => true do
