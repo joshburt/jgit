@@ -19,6 +19,7 @@
 require "spec_helper"
 require "support/shared/unit/resource/static_provider_resolution"
 require './libraries/resource_jgit'
+require './libraries/provider_jgit'
 
 describe Chef::Resource::JGit do
 
