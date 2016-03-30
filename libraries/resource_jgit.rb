@@ -17,7 +17,7 @@
 # limitations under the License.
 #
 
-require 'chef/resource/scm'
+require "chef/resource/scm"
 
 class Chef
   class Resource
