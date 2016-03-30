@@ -127,7 +127,7 @@ class Chef
       end
 
       def find_current_revision
-        Chef::Log.info("#{@new_resource} finding current git revision")
+        Chef::Log.debug("#{@new_resource} finding current git revision")
         if ::File.exist?(::File.join(cwd, '.git'))
           # 128 is returned when we're not in a git repo. this is fine
           run_opts = { cwd: cwd, returns: [0, 128] }
@@ -139,7 +139,7 @@ class Chef
 
       def setup_remote_tracking_branches(remote_name, remote_url)
         converge_by("set up remote tracking branches for #{remote_url} at #{remote_name}") do
-          Chef::Log.info "#{@new_resource} configuring remote tracking branches for repository #{remote_url} at remote #{remote_name}"
+          Chef::Log.debug "#{@new_resource} configuring remote tracking branches for repository #{remote_url} at remote #{remote_name}"
           run_opts = { cwd: cwd, returns: [0, 1, 2] }
           remote_status = git_standard_executor(['config', '--get', "remote.#{remote_name}.url"], run_opts)
 
@@ -263,7 +263,7 @@ class Chef
       end
 
       def remote_resolve_reference
-        Chef::Log.info("#{@new_resource} resolving remote reference")
+        Chef::Log.debug("#{@new_resource} resolving remote reference")
         # The sha pointed to by an annotated tag is identified by the
         # '^{}' suffix appended to the tag. In order to resolve
         # annotated tags, we have to search for "revision*" and
@@ -290,7 +290,7 @@ class Chef
           enable_submodules
           add_remotes
         else
-          Chef::Log.info "#{@new_resource} checkout destination #{cwd} already exists or is a non-empty directory"
+          Chef::Log.debug "#{@new_resource} checkout destination #{cwd} already exists or is a non-empty directory"
         end
       end
 
@@ -303,7 +303,7 @@ class Chef
 
       def action_sync
         if existing_git_clone?
-          Chef::Log.info "#{@new_resource} current revision: #{@current_resource.revision} target revision: #{target_revision}"
+          Chef::Log.debug "#{@new_resource} current revision: #{@current_resource.revision} target revision: #{target_revision}"
           unless current_revision_matches_target_revision?
             fetch_updates
             enable_submodules
