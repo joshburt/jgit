@@ -71,11 +71,27 @@ class Chef
         end
       end
 
-      def target_revision
-        @target_revision ||= sha_hash?(@new_resource.revision) ? @new_resource.revision : remote_resolve_reference
+      def find_current_revision
+        Chef::Log.debug("#{@new_resource} finding current git revision")
+        if ::File.exist?(::File.join(cwd, ".git"))
+          # 128 is returned when we're not in a git repo. this is fine
+          run_opts = { cwd: cwd, returns: [0, 128] }
+          rev_parse_result = git_standard_executor(["rev-parse", "HEAD"], run_opts)
+          rev = rev_parse_result.stdout.strip
+        end
+        sha_hash?(rev) ? rev : nil
       end
 
-      alias revision_slug target_revision
+      def add_remotes
+        unless @new_resource.additional_remotes.empty?
+          @new_resource.additional_remotes.each_pair do |remote_name, remote_url|
+            converge_by("add remote #{remote_name} from #{remote_url}") do
+              Chef::Log.info "#{@new_resource} adding git remote #{remote_name} = #{remote_url}"
+              setup_remote_tracking_branches(remote_name, remote_url)
+            end
+          end
+        end
+      end
 
       def clone
         converge_by("clone from #{@new_resource.repository} into #{cwd}") do
@@ -92,7 +108,7 @@ class Chef
           git_standard_executor(["checkout", @new_resource.checkout_branch], run_opts)
           Chef::Log.info "#{@new_resource} checked out branch: #{@new_resource.revision} onto: #{@new_resource.checkout_branch} reference: #{sha_ref}"
         end
-      end
+end
 
       def enable_submodules
         if @new_resource.enable_submodules
@@ -115,47 +131,25 @@ class Chef
         end
       end
 
-      def find_current_revision
-        Chef::Log.info("#{@new_resource} finding current git revision")
-        if ::File.exist?(::File.join(cwd, ".git"))
-          # 128 is returned when we're not in a git repo. this is fine
-          run_opts = { cwd: cwd, returns: [0, 128] }
-          rev_parse_result = git_standard_executor(["rev-parse", "HEAD"], run_opts)
-          rev = rev_parse_result.stdout.strip
-        end
-        sha_hash?(rev) ? rev : nil
-      end
-
       def setup_remote_tracking_branches(remote_name, remote_url)
         converge_by("set up remote tracking branches for #{remote_url} at #{remote_name}") do
-          Chef::Log.info "#{@new_resource} configuring remote tracking branches for repository #{remote_url} at remote #{remote_name}"
+          Chef::Log.debug "#{@new_resource} configuring remote tracking branches for repository #{remote_url} at remote #{remote_name}"
           run_opts = { cwd: cwd, returns: [0, 1, 2] }
           remote_status = git_standard_executor(["config", "--get", "remote.#{remote_name}.url"], run_opts)
 
           run_opts = { cwd: cwd }
           case remote_status.exitstatus
-          when 0, 2
-            # * Status 0 means that we already have a remote with this name, so we should update the url
-            #   if it doesn't match the url we want.
-            # * Status 2 means that we have multiple urls assigned to the same remote (not a good idea)
-            #   which we can fix by replacing them all with our target url (hence the --replace-all option)
+            when 0, 2
+              # * Status 0 means that we already have a remote with this name, so we should update the url
+              #   if it doesn't match the url we want.
+              # * Status 2 means that we have multiple urls assigned to the same remote (not a good idea)
+              #   which we can fix by replacing them all with our target url (hence the --replace-all option)
 
-            if multiple_remotes?(remote_status) || !remote_matches?(remote_url, remote_status)
-              git_standard_executor(["config", "--replace-all", "remote.#{remote_name}.url", remote_url], run_opts)
-            end
-          when 1
-            git_standard_executor(["remote", "add", remote_name, remote_url], run_opts)
-          end
-        end
-      end
-
-      def add_remotes
-        unless @new_resource.additional_remotes.empty?
-          @new_resource.additional_remotes.each_pair do |remote_name, remote_url|
-            converge_by("add remote #{remote_name} from #{remote_url}") do
-              Chef::Log.info "#{@new_resource} adding git remote #{remote_name} = #{remote_url}"
-              setup_remote_tracking_branches(remote_name, remote_url)
-            end
+              if multiple_remotes?(remote_status) || !remote_matches?(remote_url, remote_status)
+                git_standard_executor(["config", "--replace-all", "remote.#{remote_name}.url", remote_url], run_opts)
+              end
+            when 1
+              git_standard_executor(["remote", "add", remote_name, remote_url], run_opts)
           end
         end
       end
@@ -167,6 +161,12 @@ class Chef
       def remote_matches?(remote_url, check_remote_command_result)
         check_remote_command_result.stdout.strip.eql?(remote_url)
       end
+
+      def target_revision
+        @target_revision ||= sha_hash?(@new_resource.revision) ? @new_resource.revision : remote_resolve_reference
+      end
+
+      alias revision_slug target_revision
 
       private
 
@@ -223,55 +223,6 @@ class Chef
         string =~ /^[0-9a-f]{40}$/
       end
 
-      def refs_search(refs, pattern)
-        refs.find_all { |m| m[1] == pattern }
-      end
-
-      def git_ls_remote(rev_pattern)
-        stdout_obj = git_standard_executor ["ls-remote", "\"#{@new_resource.repository}\"", "\"#{rev_pattern}\""]
-        stdout_obj.stdout
-      end
-
-      def rev_search_pattern
-        if ["", "HEAD"].include? @new_resource.revision
-          "HEAD"
-        else
-          @new_resource.revision + "*"
-        end
-      end
-
-      def rev_match_pattern(prefix, revision)
-        revision.start_with?(prefix) ? revision : prefix + revision
-      end
-
-      def find_revision(refs, revision, suffix = "")
-        found = refs_search(refs, rev_match_pattern("refs/tags/", revision) + suffix)
-        found = refs_search(refs, rev_match_pattern("refs/heads/", revision) + suffix) if found.empty?
-        found = refs_search(refs, revision + suffix) if found.empty?
-        found
-      end
-
-      def remote_resolve_reference
-        Chef::Log.info("#{@new_resource} resolving remote reference")
-        # The sha pointed to by an annotated tag is identified by the
-        # '^{}' suffix appended to the tag. In order to resolve
-        # annotated tags, we have to search for "revision*" and
-        # post-process. Special handling for 'HEAD' to ignore a tag
-        # named 'HEAD'.
-        @resolved_reference = git_ls_remote(rev_search_pattern)
-        refs = @resolved_reference.split("\n").map { |line| line.split("\t") }
-        # First try for ^{} indicating the commit pointed to by an
-        # annotated tag.
-        # It is possible for a user to create a tag named 'HEAD'.
-        # Using such a degenerate annotated tag would be very
-        # confusing. We avoid the issue by disallowing the use of
-        # annotated tags named 'HEAD'.
-
-        found = rev_search_pattern != "HEAD" ? find_revision(refs, @new_resource.revision, "^{}") : refs_search(refs, "HEAD")
-        found = find_revision(refs, @new_resource.revision) if found.empty?
-        found.size == 1 ? found.first[0] : nil
-      end
-
       def action_checkout
         if target_dir_non_existent_or_empty?
           clone
@@ -279,9 +230,9 @@ class Chef
           enable_submodules
           add_remotes
         else
-          Chef::Log.info "#{@new_resource} checkout destination #{cwd} already exists or is a non-empty directory"
+          Chef::Log.debug "#{@new_resource} checkout destination #{cwd} already exists or is a non-empty directory"
         end
-      end
+end
 
       def action_export
         action_checkout
@@ -292,7 +243,7 @@ class Chef
 
       def action_sync
         if existing_git_clone?
-          Chef::Log.info "#{@new_resource} current revision: #{@current_resource.revision} target revision: #{target_revision}"
+          Chef::Log.debug "#{@new_resource} current revision: #{@current_resource.revision} target revision: #{target_revision}"
           unless current_revision_matches_target_revision?
             fetch_updates
             enable_submodules
@@ -317,6 +268,59 @@ class Chef
         !::File.exist?(cwd) || Dir.entries(cwd).sort == [".", ".."]
       end
 
+      def current_revision_matches_target_revision?
+        !@current_resource.revision.nil? && (target_revision.strip.to_i(16) == @current_resource.revision.strip.to_i(16))
+      end
+
+      def remote_resolve_reference
+        Chef::Log.debug("#{@new_resource} resolving remote reference")
+        # The sha pointed to by an annotated tag is identified by the
+        # '^{}' suffix appended to the tag. In order to resolve
+        # annotated tags, we have to search for "revision*" and
+        # post-process. Special handling for 'HEAD' to ignore a tag
+        # named 'HEAD'.
+        @resolved_reference = git_ls_remote(rev_search_pattern)
+        refs = @resolved_reference.split("\n").map { |line| line.split("\t") }
+        # First try for ^{} indicating the commit pointed to by an
+        # annotated tag.
+        # It is possible for a user to create a tag named 'HEAD'.
+        # Using such a degenerate annotated tag would be very
+        # confusing. We avoid the issue by disallowing the use of
+        # annotated tags named 'HEAD'.
+
+        found = rev_search_pattern != "HEAD" ? find_revision(refs, @new_resource.revision, "^{}") : refs_search(refs, "HEAD")
+        found = find_revision(refs, @new_resource.revision) if found.empty?
+        found.size == 1 ? found.first[0] : nil
+      end
+
+      def find_revision(refs, revision, suffix = "")
+        found = refs_search(refs, rev_match_pattern("refs/tags/", revision) + suffix)
+        found = refs_search(refs, rev_match_pattern("refs/heads/", revision) + suffix) if found.empty?
+        found = refs_search(refs, revision + suffix) if found.empty?
+        found
+      end
+
+      def rev_match_pattern(prefix, revision)
+        revision.start_with?(prefix) ? revision : prefix + revision
+      end
+
+      def rev_search_pattern
+        if ["", "HEAD"].include? @new_resource.revision
+          "HEAD"
+        else
+          @new_resource.revision + "*"
+        end
+      end
+
+      def git_ls_remote(rev_pattern)
+        stdout_obj = git_standard_executor ["ls-remote", "\"#{@new_resource.repository}\"", "\"#{rev_pattern}\""]
+        stdout_obj.stdout
+      end
+
+      def refs_search(refs, pattern)
+        refs.find_all { |m| m[1] == pattern }
+      end
+
       def clone_by_advertized_ref
         git_clone_by_advertized_ref_cmd = ["clone"]
         git_clone_by_advertized_ref_cmd << build_standard_clone_args
@@ -338,7 +342,7 @@ class Chef
 
       def fetch_by_advertized_ref
         # since we're in a local branch already, just reset to specified revision rather than merge
-        Chef::Log.info "Fetching updates from #{new_resource.remote} and resetting to revision #{target_revision}"
+        Chef::Log.debug "Fetching updates from #{new_resource.remote} and resetting to revision #{target_revision}"
 
         fetch_args = ["--tags"]
         fetch_args << "--depth #{@new_resource.depth}" if @new_resource.depth
@@ -363,9 +367,6 @@ class Chef
         git_standard_executor(git_reset_command, run_opts)
       end
 
-      def current_revision_matches_target_revision?
-        !@current_resource.revision.nil? && (target_revision.strip.to_i(16) == @current_resource.revision.strip.to_i(16))
-      end
     end
   end
 end
