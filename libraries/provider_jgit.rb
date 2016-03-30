@@ -99,7 +99,7 @@ class Chef
           converge_by("enable git submodules for #{@new_resource}") do
             Chef::Log.info "#{@new_resource} synchronizing git submodules"
             run_opts = { cwd: cwd }
-            git_standard_executor(%w{"submodule", "sync"}, run_opts)
+            git_standard_executor(%w{submodule sync}, run_opts)
 
             Chef::Log.info "#{@new_resource} enabling git submodules"
             # the --recursive flag means we require git 1.6.5+ now, see CHEF-1827
