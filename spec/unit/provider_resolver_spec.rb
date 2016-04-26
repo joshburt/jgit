@@ -532,7 +532,6 @@ describe Chef::ProviderResolver do
       file:                   [ Chef::Resource::File, Chef::Provider::File ],
       gem_package:            [ Chef::Resource::GemPackage, Chef::Provider::Package::Rubygems ],
       git:                    [ Chef::Resource::Git, Chef::Provider::Git ],
-      jgit:                   [ Chef::Resource::JGit, Chef::Provider::JGit ],
       group:                  [ Chef::Resource::Group, Chef::Provider::Group::Gpasswd ],
       homebrew_package:       [ Chef::Resource::HomebrewPackage, Chef::Provider::Package::Homebrew ],
       http_request:           [ Chef::Resource::HttpRequest, Chef::Provider::HttpRequest ],

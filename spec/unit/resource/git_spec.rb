@@ -30,22 +30,22 @@ describe Chef::Resource::JGit do
   )
 
   before(:each) do
-    @git = Chef::Resource::JGit.new("my awesome webapp")
+    @jgit = Chef::Resource::JGit.new("my awesome webapp")
   end
 
   it "is a kind of Scm Resource" do
-    expect(@git).to be_a_kind_of(Chef::Resource::Scm)
-    expect(@git).to be_an_instance_of(Chef::Resource::JGit)
+    expect(@jgit).to be_a_kind_of(Chef::Resource::Scm)
+    expect(@jgit).to be_an_instance_of(Chef::Resource::JGit)
   end
 
   it "uses aliases revision as branch" do
-    @git.branch "HEAD"
-    expect(@git.revision).to eql("HEAD")
+    @jgit.branch "HEAD"
+    expect(@jgit.revision).to eql("HEAD")
   end
 
   it "aliases revision as reference" do
-    @git.reference "v1.0 tag"
-    expect(@git.revision).to eql("v1.0 tag")
+    @jgit.reference "v1.0 tag"
+    expect(@jgit.revision).to eql("v1.0 tag")
   end
 
 end
