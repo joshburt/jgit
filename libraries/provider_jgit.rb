@@ -24,7 +24,6 @@ require "fileutils"
 class Chef
   class Provider
     class JGit < Chef::Provider
-
       provides :jgit
 
       def whyrun_supported?
@@ -136,6 +135,8 @@ class Chef
         end
       end
 
+################################################################################
+=begin
       def clone
         converge_by("clone from #{@new_resource.repository} into #{cwd}") do
           remote = @new_resource.remote
@@ -151,6 +152,67 @@ class Chef
           git clone_cmd
         end
       end
+=end
+
+      def clone
+        converge_by("clone from #{@new_resource.repository} into #{cwd}") do
+
+          remote = @new_resource.remote
+          args = []
+          args << "-o #{remote}" unless remote == "origin"
+          args << "--depth #{@new_resource.depth}" if @new_resource.depth
+          args << "--recursive" if @new_resource.enable_submodules # https://git-scm.com/book/en/v2/Git-Tools-Submodules
+
+
+          if @new_resource.uploadpack_allow_reachable_sha1_in_want && (git_minor_version >= Gem::Version.new("2.5.0"))
+            # Introduced in git 2.5 // uploadpack.allowReachableSHA1InWant
+            # https://github.com/git/git/blob/v2.5.0/Documentation/config.txt#L2570
+            clone_by_any_ref args
+          else
+            clone_by_advertized_ref args
+          end
+        end
+      end
+
+      def clone_by_any_ref(args)
+        Chef::Log.info "#{@new_resource} cloning [shallow] repo #{@new_resource.repository} to #{cwd}"
+
+        # Creates a light weight [empty] local git repository
+        git("init", "\"#{cwd}\"")
+        setup_remote_tracking_branches("origin", @new_resource.repository)
+
+        # build our light weight fetch command
+        # standard_args = build_standard_clone_args
+        fetch_args = [@new_resource.revision]
+        fetch_args << args unless args.empty?
+        fetch_args << "--no-tags"
+
+        git_fetch("origin", fetch_args)
+      end
+
+      def clone_by_advertized_ref(args)
+        git_clone_by_advertized_ref_cmd = ["clone"]
+        git_clone_by_advertized_ref_cmd << args unless args.empty?
+        git_clone_by_advertized_ref_cmd << "--no-single-branch" if @new_resource.depth && (git_minor_version >= Gem::Version.new("1.7.10"))
+        git_clone_by_advertized_ref_cmd << "\"#{@new_resource.repository}\""
+        git_clone_by_advertized_ref_cmd << "\"#{cwd}\""
+
+        Chef::Log.info "#{@new_resource} cloning repo #{@new_resource.repository} to #{@new_resource.destination}"
+        git git_clone_by_advertized_ref_cmd
+      end
+
+=begin
+      def build_standard_clone_args
+        remote = @new_resource.remote
+        args = []
+        args << "-o #{remote}" unless remote == "origin"
+        args << "--depth #{@new_resource.depth}" if @new_resource.depth
+        args << "--recursive" if @new_resource.enable_submodules # https://git-scm.com/book/en/v2/Git-Tools-Submodules
+        args if args.length > 0
+      end
+=end
+
+################################################################################
 
       def checkout
         sha_ref = target_revision
@@ -175,6 +237,8 @@ class Chef
         end
       end
 
+################################################################################
+=begin
       def fetch_updates
         setup_remote_tracking_branches(@new_resource.remote, @new_resource.repository)
         converge_by("fetch updates for #{@new_resource.remote}") do
@@ -185,6 +249,58 @@ class Chef
           git("reset", "--hard", target_revision, cwd: cwd)
         end
       end
+=end
+
+      def fetch_updates
+        converge_by("fetch updates for #{@new_resource.remote}") do
+          # uploadpack.allowReachableSHA1InWant introduced in git 2.5.0
+          if @new_resource.uploadpack_allow_reachable_sha1_in_want && (git_minor_version >= Gem::Version.new("2.5.0"))
+            fetch_by_any_ref
+          else
+            setup_remote_tracking_branches(@new_resource.remote, @new_resource.repository)
+            fetch_by_advertized_ref
+          end
+        end
+      end
+
+      def fetch_by_any_ref
+        Chef::Log.info "Fetching [shallow] updates from #{new_resource.remote} and resetting to revision #{target_revision}"
+
+        # fetch_args = [target_revision, "--prune"] # prune added: https://github.com/chef/chef/issues/3929 (Resolves CHEF-3929)
+        fetch_args = [target_revision] # prune added: https://github.com/chef/chef/issues/3929 (Resolves CHEF-3929)
+        fetch_args << "--depth #{@new_resource.depth}" if @new_resource.depth
+        git_fetch("origin", fetch_args)
+        git_reset_hard
+      end
+
+      def fetch_by_advertized_ref
+        # since we're in a local branch already, just reset to specified revision rather than merge
+        Chef::Log.debug "Fetching updates from #{new_resource.remote} and resetting to revision #{target_revision}"
+
+        # fetch_args = ["--tags", "--prune"] # prune added: https://github.com/chef/chef/issues/3929 (Resolves CHEF-3929)
+        fetch_args = ["--tags"] # prune added: https://github.com/chef/chef/issues/3929 (Resolves CHEF-3929)
+        fetch_args << "--depth #{@new_resource.depth}" if @new_resource.depth
+
+        git_fetch(@new_resource.remote, fetch_args)
+        git_reset_hard
+      end
+
+      def git_fetch(fetch_source, args = [])
+        git_fetch_command = ["fetch", fetch_source]
+        git_fetch_command << args unless args.empty?
+        # git(git_fetch_command, cwd: cwd, returns: [0, 1, 128])
+        git(git_fetch_command, cwd: cwd)
+      end
+
+      def git_reset_hard(args = [])
+        git_reset_command = ["reset"]
+        git_reset_command << args unless args.empty?
+        git_reset_command << "--hard"
+        git_reset_command << target_revision
+        git(git_reset_command, cwd: cwd)
+      end
+
+################################################################################
 
       def setup_remote_tracking_branches(remote_name, remote_url)
         converge_by("set up remote tracking branches for #{remote_url} at #{remote_name}") do
