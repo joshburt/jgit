@@ -196,7 +196,7 @@ class Chef
         git_clone_by_advertised_ref << "\"#{@new_resource.repository}\""
         git_clone_by_advertised_ref << "\"#{cwd}\""
 
-        Chef::Log.info "#{@new_resource} cloning repo #{@new_resource.repository} to #{@new_resource.destination}"
+        Chef::Log.info "#{@new_resource} cloning repo #{@new_resource.repository} to #{cwd}"
         git git_clone_by_advertised_ref
       end
 
