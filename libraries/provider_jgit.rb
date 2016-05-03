@@ -164,13 +164,12 @@ class Chef
           args << "--depth #{@new_resource.depth}" if @new_resource.depth
           args << "--recursive" if @new_resource.enable_submodules # https://git-scm.com/book/en/v2/Git-Tools-Submodules
 
-
           if @new_resource.uploadpack_allow_reachable_sha1_in_want && (git_minor_version >= Gem::Version.new("2.5.0"))
             # Introduced in git 2.5 // uploadpack.allowReachableSHA1InWant
             # https://github.com/git/git/blob/v2.5.0/Documentation/config.txt#L2570
             clone_by_any_ref args
           else
-            clone_by_advertized_ref args
+            clone_by_advertised_ref args
           end
         end
       end
@@ -190,15 +189,15 @@ class Chef
         git_fetch("origin", fetch_args)
       end
 
-      def clone_by_advertized_ref(args)
-        git_clone_by_advertized_ref_cmd = ["clone"]
-        git_clone_by_advertized_ref_cmd << args unless args.empty?
-        git_clone_by_advertized_ref_cmd << "--no-single-branch" if @new_resource.depth && (git_minor_version >= Gem::Version.new("1.7.10"))
-        git_clone_by_advertized_ref_cmd << "\"#{@new_resource.repository}\""
-        git_clone_by_advertized_ref_cmd << "\"#{cwd}\""
+      def clone_by_advertised_ref(args)
+        git_clone_by_advertised_ref = ["clone"]
+        git_clone_by_advertised_ref << args unless args.empty?
+        git_clone_by_advertised_ref << "--no-single-branch" if @new_resource.depth && (git_minor_version >= Gem::Version.new("1.7.10"))
+        git_clone_by_advertised_ref << "\"#{@new_resource.repository}\""
+        git_clone_by_advertised_ref << "\"#{cwd}\""
 
         Chef::Log.info "#{@new_resource} cloning repo #{@new_resource.repository} to #{@new_resource.destination}"
-        git git_clone_by_advertized_ref_cmd
+        git git_clone_by_advertised_ref
       end
 
 ################################################################################
@@ -249,7 +248,7 @@ class Chef
             fetch_by_any_ref
           else
             setup_remote_tracking_branches(@new_resource.remote, @new_resource.repository)
-            fetch_by_advertized_ref
+            fetch_by_advertised_ref
           end
         end
       end
@@ -264,7 +263,7 @@ class Chef
         git_reset_hard
       end
 
-      def fetch_by_advertized_ref
+      def fetch_by_advertised_ref
         # since we're in a local branch already, just reset to specified revision rather than merge
         Chef::Log.debug "Fetching updates from #{new_resource.remote} and resetting to revision #{target_revision}"
 
@@ -279,7 +278,6 @@ class Chef
       def git_fetch(fetch_source, args = [])
         git_fetch_command = ["fetch", fetch_source]
         git_fetch_command << args unless args.empty?
-        # git(git_fetch_command, cwd: cwd, returns: [0, 1, 128])
         git(git_fetch_command, cwd: cwd)
       end
 
