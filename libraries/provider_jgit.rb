@@ -136,6 +136,7 @@ class Chef
       end
 
 ################################################################################
+################################################################################
 =begin
       def clone
         converge_by("clone from #{@new_resource.repository} into #{cwd}") do
@@ -153,7 +154,7 @@ class Chef
         end
       end
 =end
-
+################################################################################
       def clone
         converge_by("clone from #{@new_resource.repository} into #{cwd}") do
 
@@ -182,7 +183,6 @@ class Chef
         setup_remote_tracking_branches("origin", @new_resource.repository)
 
         # build our light weight fetch command
-        # standard_args = build_standard_clone_args
         fetch_args = [@new_resource.revision]
         fetch_args << args unless args.empty?
         fetch_args << "--no-tags"
@@ -201,17 +201,7 @@ class Chef
         git git_clone_by_advertized_ref_cmd
       end
 
-=begin
-      def build_standard_clone_args
-        remote = @new_resource.remote
-        args = []
-        args << "-o #{remote}" unless remote == "origin"
-        args << "--depth #{@new_resource.depth}" if @new_resource.depth
-        args << "--recursive" if @new_resource.enable_submodules # https://git-scm.com/book/en/v2/Git-Tools-Submodules
-        args if args.length > 0
-      end
-=end
-
+################################################################################
 ################################################################################
 
       def checkout
@@ -237,6 +227,7 @@ class Chef
         end
       end
 
+################################################################################
 ################################################################################
 =begin
       def fetch_updates
@@ -300,6 +291,7 @@ class Chef
         git(git_reset_command, cwd: cwd)
       end
 
+################################################################################
 ################################################################################
 
       def setup_remote_tracking_branches(remote_name, remote_url)
