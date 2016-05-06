@@ -41,11 +41,11 @@ class Chef
       def define_resource_requirements
         # Parent directory of the target must exist.
         requirements.assert(:checkout, :sync) do |a|
-          dirname = ::File.dirname(cwd)
+          dirname = ::File.dirname(@new_resource.destination)
           a.assertion { ::File.directory?(dirname) }
           a.whyrun("Directory #{dirname} does not exist, this run will fail unless it has been previously created. Assuming it would have been created.")
           a.failure_message(Chef::Exceptions::MissingParentDirectory,
-                            "Cannot clone #{@new_resource} to #{cwd}, the enclosing directory #{dirname} does not exist")
+                            "Cannot clone #{@new_resource} to #{@new_resource.destination}, the enclosing directory #{dirname} does not exist")
         end
 
         requirements.assert(:all_actions) do |a|
@@ -78,14 +78,14 @@ class Chef
           enable_submodules
           add_remotes
         else
-          Chef::Log.debug "#{@new_resource} checkout destination #{cwd} already exists or is a non-empty directory"
+          Chef::Log.debug "#{@new_resource} checkout destination #{@new_resource.destination} already exists or is a non-empty directory"
         end
       end
 
       def action_export
         action_checkout
-        converge_by("complete the export by removing #{cwd}.git after checkout") do
-          FileUtils.rm_rf(::File.join(cwd, ".git"))
+        converge_by("complete the export by removing #{@new_resource.destination}.git after checkout") do
+          FileUtils.rm_rf(::File.join(@new_resource.destination, ".git"))
         end
       end
 
@@ -108,11 +108,11 @@ class Chef
       end
 
       def existing_git_clone?
-        ::File.exist?(::File.join(cwd, ".git"))
+        ::File.exist?(::File.join(@new_resource.destination, ".git"))
       end
 
       def target_dir_non_existent_or_empty?
-        !::File.exist?(cwd) || Dir.entries(cwd).sort == [".", ".."]
+        !::File.exist?(@new_resource.destination) || Dir.entries(@new_resource.destination).sort == [".", ".."]
       end
 
       def find_current_revision
