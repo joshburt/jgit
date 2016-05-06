@@ -155,7 +155,8 @@ class Chef
             fetch_args << "--no-tags"
 
             Chef::Log.info "#{@new_resource} cloning [light-weight] repository #{@new_resource.repository} to #{cwd}"
-            git_fetch("origin", fetch_args)
+            setup_remote_tracking_branches(@new_resource.remote, @new_resource.repository)
+            git_fetch(@new_resource.remote, fetch_args)
           else
             # We will be performing a standard clone operation ..
             clone_by_advertised_ref = ["clone"]
