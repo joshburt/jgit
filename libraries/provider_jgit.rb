@@ -24,7 +24,10 @@ require "fileutils"
 class Chef
   class Provider
     class JGit < Chef::Provider
+      extend Forwardable
       provides :jgit
+
+      def_delegator :@new_resource, :destination, :cwd
 
       def whyrun_supported?
         true
@@ -41,20 +44,20 @@ class Chef
       def define_resource_requirements
         # Parent directory of the target must exist.
         requirements.assert(:checkout, :sync) do |a|
-          dirname = ::File.dirname(@new_resource.destination)
+          dirname = ::File.dirname(cwd)
           a.assertion { ::File.directory?(dirname) }
           a.whyrun("Directory #{dirname} does not exist, this run will fail unless it has been previously created. Assuming it would have been created.")
           a.failure_message(Chef::Exceptions::MissingParentDirectory,
-                            "Cannot clone #{@new_resource} to #{@new_resource.destination}, the enclosing directory #{dirname} does not exist")
+            "Cannot clone #{@new_resource} to #{cwd}, the enclosing directory #{dirname} does not exist")
         end
 
         requirements.assert(:all_actions) do |a|
           a.assertion { !(@new_resource.revision =~ /^origin\//) }
           a.failure_message Chef::Exceptions::InvalidRemoteGitReference,
-                            "Deploying remote branches is not supported. " +
-                                "Specify the remote branch as a local branch for " +
-                                "the git repository you're deploying from " +
-                                "(ie: '#{@new_resource.revision.gsub('origin/', '')}' rather than '#{@new_resource.revision}')."
+             "Deploying remote branches is not supported. " +
+            "Specify the remote branch as a local branch for " +
+            "the git repository you're deploying from " +
+            "(ie: '#{@new_resource.revision.gsub('origin/', '')}' rather than '#{@new_resource.revision}')."
         end
 
         requirements.assert(:all_actions) do |a|
@@ -63,9 +66,9 @@ class Chef
           # if we can't resolve it up front.
           a.assertion { target_revision != nil }
           a.failure_message Chef::Exceptions::UnresolvableGitReference,
-                            "Unable to parse SHA reference for '#{@new_resource.revision}' in repository '#{@new_resource.repository}'. " +
-                                "Verify your (case-sensitive) repository URL and revision.\n" +
-                                "`git ls-remote '#{@new_resource.repository}' '#{rev_search_pattern}'` output: #{@resolved_reference}"
+            "Unable to parse SHA reference for '#{@new_resource.revision}' in repository '#{@new_resource.repository}'. " +
+            "Verify your (case-sensitive) repository URL and revision.\n" +
+            "`git ls-remote '#{@new_resource.repository}' '#{rev_search_pattern}'` output: #{@resolved_reference}"
         end
       end
 
@@ -78,14 +81,14 @@ class Chef
           enable_submodules
           add_remotes
         else
-          Chef::Log.debug "#{@new_resource} checkout destination #{@new_resource.destination} already exists or is a non-empty directory"
+          Chef::Log.debug "#{@new_resource} checkout destination #{cwd} already exists or is a non-empty directory"
         end
       end
 
       def action_export
         action_checkout
-        converge_by("complete the export by removing #{@new_resource.destination}.git after checkout") do
-          FileUtils.rm_rf(::File.join(@new_resource.destination, ".git"))
+        converge_by("complete the export by removing #{cwd}.git after checkout") do
+          FileUtils.rm_rf(::File.join(cwd, ".git"))
         end
       end
 
@@ -108,11 +111,11 @@ class Chef
       end
 
       def existing_git_clone?
-        ::File.exist?(::File.join(@new_resource.destination, ".git"))
+        ::File.exist?(::File.join(cwd, ".git"))
       end
 
       def target_dir_non_existent_or_empty?
-        !::File.exist?(@new_resource.destination) || Dir.entries(@new_resource.destination).sort == [".", ".."]
+        !::File.exist?(cwd) || Dir.entries(cwd).sort == [".", ".."]
       end
 
       def find_current_revision
@@ -225,17 +228,17 @@ class Chef
           check_remote_command = ["config", "--get", "remote.#{remote_name}.url"]
           remote_status = git(check_remote_command, cwd: cwd, returns: [0, 1, 2])
           case remote_status.exitstatus
-            when 0, 2
-              # * Status 0 means that we already have a remote with this name, so we should update the url
-              #   if it doesn't match the url we want.
-              # * Status 2 means that we have multiple urls assigned to the same remote (not a good idea)
-              #   which we can fix by replacing them all with our target url (hence the --replace-all option)
+          when 0, 2
+            # * Status 0 means that we already have a remote with this name, so we should update the url
+            #   if it doesn't match the url we want.
+            # * Status 2 means that we have multiple urls assigned to the same remote (not a good idea)
+            #   which we can fix by replacing them all with our target url (hence the --replace-all option)
 
-              if multiple_remotes?(remote_status) || !remote_matches?(remote_url, remote_status)
-                git("config", "--replace-all", "remote.#{remote_name}.url", remote_url, cwd: cwd)
-              end
-            when 1
-              git("remote", "add", remote_name, remote_url, cwd: cwd)
+            if multiple_remotes?(remote_status) || !remote_matches?(remote_url, remote_status)
+              git("config", "--replace-all", "remote.#{remote_name}.url", remote_url, cwd: cwd)
+            end
+          when 1
+            git("remote", "add", remote_name, remote_url, cwd: cwd)
           end
         end
       end
@@ -330,7 +333,12 @@ class Chef
           # user who is executing `git` not the user running Chef.
           env["HOME"] = begin
             require "etc"
-            Etc.getpwnam(@new_resource.user).dir
+            case @new_resource.user
+            when Integer
+              Etc.getpwuid(@new_resource.user).dir
+            else
+              Etc.getpwnam(@new_resource.user.to_s).dir
+            end
           rescue ArgumentError # user not found
             raise Chef::Exceptions::User, "Could not determine HOME for specified user '#{@new_resource.user}' for resource '#{@new_resource.name}'"
           end
@@ -342,10 +350,6 @@ class Chef
         env.merge!(@new_resource.environment) if @new_resource.environment
         run_opts[:environment] = env unless env.empty?
         run_opts
-      end
-
-      def cwd
-        @new_resource.destination
       end
 
       def git(*args, **run_opts)
