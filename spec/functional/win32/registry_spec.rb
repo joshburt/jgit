@@ -26,6 +26,7 @@ describe "Chef::Win32::Registry", :windows_only do
     #Create a registry item
     ::Win32::Registry::HKEY_CURRENT_USER.create "Software\\Root"
     ::Win32::Registry::HKEY_CURRENT_USER.create "Software\\Root\\Branch"
+    ::Win32::Registry::HKEY_CURRENT_USER.create "Software\\Root\\B®anch"
     ::Win32::Registry::HKEY_CURRENT_USER.create "Software\\Root\\Branch\\Flower"
     ::Win32::Registry::HKEY_CURRENT_USER.open('Software\\Root', Win32::Registry::KEY_ALL_ACCESS) do |reg|
       reg["RootType1", Win32::Registry::REG_SZ] = "fibrous"
@@ -243,7 +244,7 @@ describe "Chef::Win32::Registry", :windows_only do
     end
 
     it "throws an exception when trying to cast an array to an int for a dword" do
-      expect { @registry.set_value("HKCU\\Software\\Root\\Branch\\Flower", { :name => "ShouldThrow", :type => :dword, :data => %w{one two} }) }.to raise_error
+      expect { @registry.set_value("HKCU\\Software\\Root\\Branch\\Flower", { :name => "ShouldThrow", :type => :dword, :data => %w{one two} }) }.to raise_error NoMethodError
     end
 
     # we are validating that the data gets .to_s called on it when type is a :string
@@ -261,11 +262,11 @@ describe "Chef::Win32::Registry", :windows_only do
     # we are validating that the data gets .to_a called on it when type is a :multi_string
 
     it "throws an exception when a multi-string is passed a number" do
-      expect { @registry.set_value("HKCU\\Software\\Root\\Branch\\Flower", { :name => "ShouldThrow", :type => :multi_string, :data => 65535 }) }.to raise_error
+      expect { @registry.set_value("HKCU\\Software\\Root\\Branch\\Flower", { :name => "ShouldThrow", :type => :multi_string, :data => 65535 }) }.to raise_error NoMethodError
     end
 
     it "throws an exception when a multi-string is passed a string" do
-      expect { @registry.set_value("HKCU\\Software\\Root\\Branch\\Flower", { :name => "ShouldBeWat", :type => :multi_string, :data => "foo" }) }.to raise_error
+      expect { @registry.set_value("HKCU\\Software\\Root\\Branch\\Flower", { :name => "ShouldBeWat", :type => :multi_string, :data => "foo" }) }.to raise_error NoMethodError
     end
   end
 

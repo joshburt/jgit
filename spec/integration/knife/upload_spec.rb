@@ -154,6 +154,25 @@ EOM
           end
         end
 
+        context "the role is in ruby" do
+          before do
+            file "roles/x.rb", <<EOM
+name "x"
+description "blargle"
+EOM
+          end
+
+          it "knife upload changes the role" do
+            knife("upload /").should_succeed "Updated /roles/x.json\n"
+            knife("diff --name-status /").should_succeed ""
+          end
+
+          it "knife upload --no-diff does not change the role" do
+            knife("upload --no-diff /").should_succeed ""
+            knife("diff --name-status /").should_succeed "M\t/roles/x.rb\n"
+          end
+        end
+
         context "when cookbook metadata has a self-dependency" do
           before do
             file "cookbooks/x/metadata.rb", "name 'x'; version '1.0.0'; depends 'x'"
@@ -260,7 +279,7 @@ EOM
           end
 
           it "knife upload with no parameters reports an error" do
-            knife("upload").should_fail "FATAL: Must specify at least one argument.  If you want to upload everything in this directory, type \"knife upload .\"\n", :stdout => /USAGE/
+            knife("upload").should_fail "FATAL: You must specify at least one argument. If you want to upload everything in this directory, run \"knife upload .\"\n", :stdout => /USAGE/
           end
         end
       end
@@ -408,7 +427,7 @@ EOM
           end
 
           it "knife upload fails" do
-            knife("upload").should_fail "FATAL: Must specify at least one argument.  If you want to upload everything in this directory, type \"knife upload .\"\n", :stdout => /USAGE/
+            knife("upload").should_fail "FATAL: You must specify at least one argument. If you want to upload everything in this directory, run \"knife upload .\"\n", :stdout => /USAGE/
           end
 
           it "knife upload --purge . uploads everything" do
@@ -632,14 +651,14 @@ WARN: Parse error reading #{path_to('environments/x.json')} as JSON: parse error
 ERROR: /environments/x.json failed to write: Parse error reading JSON: parse error: premature EOF
                                        {
                      (right here) ------^
-EOH
+          EOH
 
           warn = <<-EOH
 WARN: Parse error reading #{path_to('environments/x.json')} as JSON: parse error: premature EOF
                                        {
                      (right here) ------^
 
-EOH
+          EOH
           knife("upload /environments/x.json").should_fail(error1)
           knife("diff --name-status /environments/x.json").should_succeed("M\t/environments/x.json\n", :stderr => warn)
         end
@@ -911,7 +930,7 @@ EOM
             cwd "."
           end
           it "knife upload with no parameters reports an error" do
-            knife("upload").should_fail "FATAL: Must specify at least one argument.  If you want to upload everything in this directory, type \"knife upload .\"\n", :stdout => /USAGE/
+            knife("upload").should_fail "FATAL: You must specify at least one argument. If you want to upload everything in this directory, run \"knife upload .\"\n", :stdout => /USAGE/
           end
         end
       end
@@ -1013,7 +1032,7 @@ EOM
             cwd "data_bags"
           end
           it "knife upload fails" do
-            knife("upload").should_fail "FATAL: Must specify at least one argument.  If you want to upload everything in this directory, type \"knife upload .\"\n", :stdout => /USAGE/
+            knife("upload").should_fail "FATAL: You must specify at least one argument. If you want to upload everything in this directory, run \"knife upload .\"\n", :stdout => /USAGE/
           end
           it "knife upload --purge . uploads everything" do
             knife("upload --purge .").should_succeed <<EOM
