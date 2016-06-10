@@ -496,12 +496,36 @@ describe Chef::Provider::Package::Rubygems do
         provider.load_current_resource
       end
 
-      it "does not query for available versions when the current version is the target version" do
-        expect(provider.candidate_version).to be_nil
+      context "when the current version is the target version" do
+        it "does not query for available versions" do
+          # NOTE: odd use case -- we've equality pinned a version, but are calling :upgrade
+          expect(provider.gem_env).not_to receive(:candidate_version_from_remote)
+          expect(provider.gem_env).not_to receive(:install)
+          provider.run_action(:upgrade)
+          expect(new_resource).not_to be_updated_by_last_action
+        end
       end
 
-      context "when the current version is not the target version" do
-        let(:target_version) { "9000.0.2" }
+      context "when the current version satisfies the target version requirement" do
+        let(:target_version) { ">= 0" }
+
+        it "does not query for available versions on install" do
+          expect(provider.gem_env).not_to receive(:candidate_version_from_remote)
+          expect(provider.gem_env).not_to receive(:install)
+          provider.run_action(:install)
+          expect(new_resource).not_to be_updated_by_last_action
+        end
+
+        it "queries for available versions on upgrade" do
+          expect(provider.gem_env).to receive(:candidate_version_from_remote).
+            and_return(Gem::Version.new("9000.0.2"))
+          expect(provider.gem_env).to receive(:install)
+          provider.run_action(:upgrade)
+          expect(new_resource).to be_updated_by_last_action
+        end
+      end
+
+      context "when the requested source is a remote server" do
         let(:source) { "http://mygems.example.com" }
 
         it "determines the candidate version by querying the remote gem servers" do
@@ -562,9 +586,10 @@ describe Chef::Provider::Package::Rubygems do
 
         context "when source is a path" do
           let(:source) { CHEF_SPEC_DATA + "/gems/chef-integration-test-0.1.0.gem" }
+          let(:domain) { { domain: :local } }
 
           it "installs the gem from file via the gems api" do
-            expect(provider.gem_env).to receive(:install).with(source)
+            expect(provider.gem_env).to receive(:install).with(source, domain)
             provider.run_action(:install)
             expect(new_resource).to be_updated_by_last_action
           end
@@ -572,10 +597,11 @@ describe Chef::Provider::Package::Rubygems do
 
         context "when the gem name is a file path and source is nil" do
           let(:gem_name) { CHEF_SPEC_DATA + "/gems/chef-integration-test-0.1.0.gem" }
+          let(:domain) { { domain: :local } }
 
           it "installs the gem from file via the gems api" do
             expect(new_resource.source).to eq(gem_name)
-            expect(provider.gem_env).to receive(:install).with(gem_name)
+            expect(provider.gem_env).to receive(:install).with(gem_name, domain)
             provider.run_action(:install)
             expect(new_resource).to be_updated_by_last_action
           end
@@ -667,6 +693,11 @@ describe Chef::Provider::Package::Rubygems do
               expect(provider.gem_env).not_to receive(:install)
               provider.run_action(:install)
             end
+
+            it "performs the upgrade" do
+              expect(provider.gem_env).to receive(:install)
+              provider.run_action(:upgrade)
+            end
           end
 
           context "if the fuzzy operator is used" do
@@ -676,6 +707,11 @@ describe Chef::Provider::Package::Rubygems do
             it "it matches an existing gem" do
               expect(provider.gem_env).not_to receive(:install)
               provider.run_action(:install)
+            end
+
+            it "it upgrades an existing gem" do
+              expect(provider.gem_env).to receive(:install)
+              provider.run_action(:upgrade)
             end
           end
         end
@@ -693,9 +729,10 @@ describe Chef::Provider::Package::Rubygems do
         context "when source is a path" do
           let(:source) { CHEF_SPEC_DATA + "/gems/chef-integration-test-0.1.0.gem" }
           let(:target_version) { ">= 0" }
+          let(:domain) { " --local" }
 
           it "installs the gem by shelling out to gem install" do
-            expect(provider).to receive(:shell_out!).with("#{gem_binary} install #{source} -q --no-rdoc --no-ri -v \"#{target_version}\"", env: nil, timeout: 900)
+            expect(provider).to receive(:shell_out!).with("#{gem_binary} install #{source} -q --no-rdoc --no-ri -v \"#{target_version}\"#{domain}", env: nil, timeout: 900)
             provider.run_action(:install)
             expect(new_resource).to be_updated_by_last_action
           end
@@ -704,10 +741,11 @@ describe Chef::Provider::Package::Rubygems do
         context "when the package is a path and source is nil" do
           let(:gem_name) { CHEF_SPEC_DATA + "/gems/chef-integration-test-0.1.0.gem" }
           let(:target_version) { ">= 0" }
+          let(:domain) { " --local" }
 
           it "installs the gem from file by shelling out to gem install when the package is a path and the source is nil" do
             expect(new_resource.source).to eq(gem_name)
-            expect(provider).to receive(:shell_out!).with("#{gem_binary} install #{gem_name} -q --no-rdoc --no-ri -v \"#{target_version}\"", env: nil, timeout: 900)
+            expect(provider).to receive(:shell_out!).with("#{gem_binary} install #{gem_name} -q --no-rdoc --no-ri -v \"#{target_version}\"#{domain}", env: nil, timeout: 900)
             provider.run_action(:install)
             expect(new_resource).to be_updated_by_last_action
           end

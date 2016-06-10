@@ -15,7 +15,7 @@ describe "chef-solo" do
 
   let(:cookbook_ancient_100_metadata_rb) { cb_metadata("ancient", "1.0.0") }
 
-  let(:chef_solo) { "ruby bin/chef-solo --minimal-ohai" }
+  let(:chef_solo) { "ruby bin/chef-solo --legacy-mode --minimal-ohai" }
 
   when_the_repository "has a cookbook with a basic recipe" do
     before do
@@ -112,7 +112,7 @@ EOM
       file "cookbooks/x/recipes/default.rb", <<EOM
 ruby_block "sleeping" do
   block do
-    sleep 5
+    sleep 10
   end
 end
 EOM
@@ -134,7 +134,7 @@ EOM
 -l debug -L #{path_to('logs/runs.log')}", :chdir => chef_dir)
 
           # Give it some time to progress
-          sleep 1
+          sleep 5
 
           # Instantiate the second chef-solo run
           s2 = Process.spawn("#{chef_solo} -c \"#{path_to('config/solo.rb')}\" -o 'x::default' \

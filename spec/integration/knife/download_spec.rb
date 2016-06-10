@@ -255,7 +255,7 @@ EOM
           end
 
           it "knife download with no parameters reports an error" do
-            knife("download").should_fail "FATAL: Must specify at least one argument.  If you want to download everything in this directory, type \"knife download .\"\n", :stdout => /USAGE/
+            knife("download").should_fail "FATAL: You must specify at least one argument. If you want to download everything in this directory, run \"knife download .\"\n", :stdout => /USAGE/
           end
         end
       end
@@ -383,7 +383,7 @@ EOM
             cwd "data_bags"
           end
           it "knife download fails" do
-            knife("download").should_fail "FATAL: Must specify at least one argument.  If you want to download everything in this directory, type \"knife download .\"\n", :stdout => /USAGE/
+            knife("download").should_fail "FATAL: You must specify at least one argument. If you want to download everything in this directory, run \"knife download .\"\n", :stdout => /USAGE/
           end
           it "knife download --purge . downloads everything" do
             knife("download --purge .").should_succeed <<EOM
@@ -528,6 +528,25 @@ Created /cookbooks/x/onlyin0.9.9.rb
 Deleted extra entry /cookbooks/x/onlyin1.0.0.rb (purge is on)
 EOM
           knife("diff --name-status /cookbooks").should_succeed ""
+        end
+      end
+    end
+
+    when_the_chef_server "has a role" do
+      before do
+        role "x", {}
+      end
+      when_the_repository "has the role in ruby" do
+        before do
+          file "roles/x.rb", <<EOM
+name "x"
+description "x"
+EOM
+        end
+
+        it "knife download refuses to change the role" do
+          knife("download /roles/x.json").should_succeed "", :stderr => "WARNING: /roles/x.rb cannot be updated (can't safely update ruby files).\n"
+          knife("diff --name-status /roles/x.json").should_succeed "M\t/roles/x.rb\n"
         end
       end
     end
@@ -760,7 +779,7 @@ EOM
             cwd "."
           end
           it "knife download with no parameters reports an error" do
-            knife("download").should_fail "FATAL: Must specify at least one argument.  If you want to download everything in this directory, type \"knife download .\"\n", :stdout => /USAGE/
+            knife("download").should_fail "FATAL: You must specify at least one argument. If you want to download everything in this directory, run \"knife download .\"\n", :stdout => /USAGE/
           end
         end
       end
@@ -879,7 +898,7 @@ EOM
             cwd "data_bags"
           end
           it "knife download fails" do
-            knife("download").should_fail "FATAL: Must specify at least one argument.  If you want to download everything in this directory, type \"knife download .\"\n", :stdout => /USAGE/
+            knife("download").should_fail "FATAL: You must specify at least one argument. If you want to download everything in this directory, run \"knife download .\"\n", :stdout => /USAGE/
           end
           it "knife download --purge . downloads everything" do
             knife("download --purge .").should_succeed <<EOM
