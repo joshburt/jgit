@@ -1,6 +1,5 @@
 #
 # Author:: Daniel DeLeo (<dan@kallistec.com>)
-# Author:: Joshua Burt (<joshburt@shapeandshare.com>)
 # Copyright:: Copyright 2008-2016, Chef Software Inc.
 # License:: Apache License, Version 2.0
 #
@@ -17,43 +16,30 @@
 # limitations under the License.
 #
 
-require 'chef/resource/scm'
+require "chef/resource/scm"
 
 class Chef
   class Resource
-    # Implementations a git interact for us
-    class JGit < Chef::Resource::Scm
+    class Jgit < Chef::Resource::Scm
       provides :jgit
 
       def initialize(name, run_context = nil)
         super
-        @resource_name = :jgit
         @additional_remotes = Hash[]
-        @uploadpack_allow_reachable_sha1_in_want = false
       end
 
       def additional_remotes(arg = nil)
         set_or_return(
           :additional_remotes,
           arg,
-          kind_of: Hash
+          :kind_of => Hash
         )
       end
 
-      # Introduced in git 2.5 // uploadpack.allowReachableSHA1InWant
-      # https://github.com/git/git/blob/v2.5.0/Documentation/config.txt#L2570
-      def uploadpack_allow_reachable_sha1_in_want(arg = nil)
-        set_or_return(
-          :uploadpack_allow_reachable_sha1_in_want,
-          arg,
-          kind_of: [TrueClass, FalseClass]
-        )
-      end
+      alias :branch :revision
+      alias :reference :revision
 
-      alias branch revision
-      alias reference revision
-
-      alias repo repository
+      alias :repo :repository
     end
   end
 end
