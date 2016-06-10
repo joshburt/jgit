@@ -81,7 +81,7 @@ describe Chef::Resource::Group, :requires_root_or_running_windows, :not_supporte
 
     if user && domain != "."
       computer_name = ENV["computername"]
-      domain.downcase != computer_name.downcase
+      !domain.casecmp(computer_name.downcase).zero?
     end
   end
 
@@ -267,14 +267,14 @@ describe Chef::Resource::Group, :requires_root_or_running_windows, :not_supporte
     end
 
     describe "when removing members" do
-      it "raises an error for a non well-formed domain name" do
+      it "does not raise an error for a non well-formed domain name" do
         group_resource.excluded_members [invalid_domain_user_name]
-        expect { group_resource.run_action(tested_action) }.to raise_error Chef::Exceptions::Win32APIError
+        expect { group_resource.run_action(tested_action) }.to_not raise_error
       end
 
-      it "raises an error for a nonexistent domain" do
+      it "does not raise an error for a nonexistent domain" do
         group_resource.excluded_members [nonexistent_domain_user_name]
-        expect { group_resource.run_action(tested_action) }.to raise_error Chef::Exceptions::Win32APIError
+        expect { group_resource.run_action(tested_action) }.to_not raise_error
       end
     end
   end
@@ -368,7 +368,7 @@ downthestreetalwayshadagoodsmileonhisfacetheoldmanwalkingdownthestreeQQQQQQ" }
 
     describe "when there is no group" do
       it "should raise an error" do
-        expect { group_resource.run_action(:modify) }.to raise_error
+        expect { group_resource.run_action(:modify) }.to raise_error(Chef::Exceptions::Group)
       end
     end
 
@@ -401,7 +401,7 @@ downthestreetalwayshadagoodsmileonhisfacetheoldmanwalkingdownthestreeQQQQQQ" }
       end
 
       it "raises an error on modify" do
-        expect { group_resource.run_action(:modify) }.to raise_error
+        expect { group_resource.run_action(:modify) }.to raise_error(Chef::Exceptions::Group)
       end
 
       it "does not raise an error on manage" do

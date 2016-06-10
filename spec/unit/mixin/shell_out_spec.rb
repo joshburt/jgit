@@ -34,6 +34,10 @@ describe Chef::Mixin::ShellOut do
     let!(:capture_log_output) { Chef::Log.logger = Logger.new(output) }
     let(:assume_deprecation_log_level) { allow(Chef::Log).to receive(:level).and_return(:warn) }
 
+    before do
+      Chef::Config[:treat_deprecation_warnings_as_errors] = false
+    end
+
     context "without options" do
       let(:command_args) { [ cmd ] }
 
@@ -53,7 +57,7 @@ describe Chef::Mixin::ShellOut do
 
     def self.should_emit_deprecation_warning_about(old_option, new_option)
       it "should emit a deprecation warning" do
-        assume_deprecation_log_level and capture_log_output
+        assume_deprecation_log_level && capture_log_output
         subject
         expect(output.string).to match /DEPRECATION:/
         expect(output.string).to match Regexp.escape(old_option.to_s)

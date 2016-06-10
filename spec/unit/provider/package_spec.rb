@@ -458,8 +458,18 @@ describe "Subclass with use_multipackage_api" do
     expect(provider.use_multipackage_api?).to be true
   end
 
-  it "offers a_to_s to subclasses to convert an array of strings to a single string" do
-    expect(provider.send(:a_to_s, "a", nil, "b", "", "c", " ", "d e", "f-g")).to eq("a b c   d e f-g")
+  context "#a_to_s utility for subclasses" do
+    it "converts varargs of strings to a single string" do
+      expect(provider.send(:a_to_s, "a", nil, "b", "", "c", " ", "d e", "f-g")).to eq("a b c   d e f-g")
+    end
+
+    it "converts an array of strings to a single string" do
+      expect(provider.send(:a_to_s, ["a", nil, "b", "", "c", " ", "d e", "f-g"])).to eq("a b c   d e f-g")
+    end
+
+    it "converts a mishmash of array args to a single string" do
+      expect(provider.send(:a_to_s, "a", [ nil, "b", "", [ "c" ] ], " ", [ "d e", "f-g" ])).to eq("a b c   d e f-g")
+    end
   end
 
   it "when user passes string to package_name, passes arrays to install_package" do
@@ -566,8 +576,11 @@ describe "Chef::Provider::Package - Multi" do
   let(:new_resource) { Chef::Resource::Package.new(%w{emacs vi}) }
   let(:current_resource) { Chef::Resource::Package.new(%w{emacs vi}) }
   let(:candidate_version) { [ "1.0", "6.2" ] }
+  class MyPackageProvider < Chef::Provider::Package
+    use_multipackage_api
+  end
   let(:provider) do
-    provider = Chef::Provider::Package.new(new_resource, run_context)
+    provider = MyPackageProvider.new(new_resource, run_context)
     provider.current_resource = current_resource
     provider.candidate_version = candidate_version
     provider
@@ -731,7 +744,7 @@ describe "Chef::Provider::Package - Multi" do
 
     it "should remove the packages if all are installed" do
       expect(provider).to be_removing_package
-      expect(provider).to receive(:remove_package).with(%w{emacs vi}, nil)
+      expect(provider).to receive(:remove_package).with(%w{emacs vi}, [nil])
       provider.run_action(:remove)
       expect(new_resource).to be_updated
       expect(new_resource).to be_updated_by_last_action
@@ -740,7 +753,7 @@ describe "Chef::Provider::Package - Multi" do
     it "should remove the packages if some are installed" do
       current_resource.version ["1.0", nil]
       expect(provider).to be_removing_package
-      expect(provider).to receive(:remove_package).with(%w{emacs vi}, nil)
+      expect(provider).to receive(:remove_package).with(%w{emacs vi}, [nil])
       provider.run_action(:remove)
       expect(new_resource).to be_updated
       expect(new_resource).to be_updated_by_last_action
@@ -787,7 +800,7 @@ describe "Chef::Provider::Package - Multi" do
 
     it "should purge the packages if all are installed" do
       expect(provider).to be_removing_package
-      expect(provider).to receive(:purge_package).with(%w{emacs vi}, nil)
+      expect(provider).to receive(:purge_package).with(%w{emacs vi}, [nil])
       provider.run_action(:purge)
       expect(new_resource).to be_updated
       expect(new_resource).to be_updated_by_last_action
@@ -796,7 +809,7 @@ describe "Chef::Provider::Package - Multi" do
     it "should purge the packages if some are installed" do
       current_resource.version ["1.0", nil]
       expect(provider).to be_removing_package
-      expect(provider).to receive(:purge_package).with(%w{emacs vi}, nil)
+      expect(provider).to receive(:purge_package).with(%w{emacs vi}, [nil])
       provider.run_action(:purge)
       expect(new_resource).to be_updated
       expect(new_resource).to be_updated_by_last_action
