@@ -18,23 +18,24 @@
 
 require "spec_helper"
 require "support/shared/unit/resource/static_provider_resolution"
+require './libraries/resource_jgit'
 
-describe Chef::Resource::Git do
+describe Chef::Resource::Jgit do
 
   static_provider_resolution(
-    resource: Chef::Resource::Git,
-    provider: Chef::Provider::Git,
-    name: :git,
+    resource: Chef::Resource::Jgit,
+    provider: Chef::Provider::Jgit,
+    name: :jgit,
     action: :sync
   )
 
   before(:each) do
-    @git = Chef::Resource::Git.new("my awesome webapp")
+    @git = Chef::Resource::Jgit.new("my awesome webapp")
   end
 
   it "is a kind of Scm Resource" do
     expect(@git).to be_a_kind_of(Chef::Resource::Scm)
-    expect(@git).to be_an_instance_of(Chef::Resource::Git)
+    expect(@git).to be_an_instance_of(Chef::Resource::Jgit)
   end
 
   it "uses aliases revision as branch" do
