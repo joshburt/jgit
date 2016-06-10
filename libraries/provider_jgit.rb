@@ -185,6 +185,7 @@ class Chef
           Chef::Log.debug "Fetching updates from #{new_resource.remote} and resetting to revision #{target_revision}"
           git("fetch", @new_resource.remote, cwd: cwd)
           git("fetch", @new_resource.remote, "--tags", cwd: cwd)
+          git("fetch", @new_resource.remote, target_revision, cwd: cwd)
           git("reset", "--hard", target_revision, cwd: cwd)
         end
       end

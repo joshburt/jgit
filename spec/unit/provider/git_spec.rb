@@ -377,8 +377,10 @@ SHAS
     expect(@provider).to receive(:shell_out!).with(expected_cmd1, :cwd => "/my/deploy/dir", :log_tag => "jgit[web2.0 app]")
     expected_cmd2 = "git fetch origin --tags"
     expect(@provider).to receive(:shell_out!).with(expected_cmd2, :cwd => "/my/deploy/dir", :log_tag => "jgit[web2.0 app]")
-    expected_cmd3 = "git reset --hard d35af14d41ae22b19da05d7d03a0bafc321b244c"
+    expected_cmd3 = "git fetch origin d35af14d41ae22b19da05d7d03a0bafc321b244c"
     expect(@provider).to receive(:shell_out!).with(expected_cmd3, :cwd => "/my/deploy/dir", :log_tag => "jgit[web2.0 app]")
+    expected_cmd4 = "git reset --hard d35af14d41ae22b19da05d7d03a0bafc321b244c"
+    expect(@provider).to receive(:shell_out!).with(expected_cmd4, :cwd => "/my/deploy/dir", :log_tag => "jgit[web2.0 app]")
     @provider.fetch_updates
   end
 
@@ -398,8 +400,13 @@ SHAS
                                                                   :user => "whois", :group => "thisis",
                                                                   :log_tag => "jgit[web2.0 app]",
                                                                   :environment => { "HOME" => "/home/whois" })
-    expected_cmd3 = "git reset --hard d35af14d41ae22b19da05d7d03a0bafc321b244c"
+    expected_cmd3 = "git fetch origin d35af14d41ae22b19da05d7d03a0bafc321b244c"
     expect(@provider).to receive(:shell_out!).with(expected_cmd3, :cwd => "/my/deploy/dir",
+                                                   :user => "whois", :group => "thisis",
+                                                   :log_tag => "jgit[web2.0 app]",
+                                                   :environment => { "HOME" => "/home/whois" })
+    expected_cmd4 = "git reset --hard d35af14d41ae22b19da05d7d03a0bafc321b244c"
+    expect(@provider).to receive(:shell_out!).with(expected_cmd4, :cwd => "/my/deploy/dir",
                                                                   :user => "whois", :group => "thisis",
                                                                   :log_tag => "jgit[web2.0 app]",
                                                                   :environment => { "HOME" => "/home/whois" })
@@ -413,8 +420,10 @@ SHAS
     expect(@provider).to receive(:shell_out!).with(fetch_command1, :cwd => "/my/deploy/dir", :log_tag => "jgit[web2.0 app]")
     fetch_command2 = "git fetch origin --tags"
     expect(@provider).to receive(:shell_out!).with(fetch_command2, :cwd => "/my/deploy/dir", :log_tag => "jgit[web2.0 app]")
-    fetch_command3 = "git reset --hard d35af14d41ae22b19da05d7d03a0bafc321b244c"
+    fetch_command3 = "git fetch origin d35af14d41ae22b19da05d7d03a0bafc321b244c"
     expect(@provider).to receive(:shell_out!).with(fetch_command3, :cwd => "/my/deploy/dir", :log_tag => "jgit[web2.0 app]")
+    fetch_command4 = "git reset --hard d35af14d41ae22b19da05d7d03a0bafc321b244c"
+    expect(@provider).to receive(:shell_out!).with(fetch_command4, :cwd => "/my/deploy/dir", :log_tag => "jgit[web2.0 app]")
     @provider.fetch_updates
   end
 
@@ -425,8 +434,10 @@ SHAS
     expect(@provider).to receive(:shell_out!).with(fetch_command1, :cwd => "/my/deploy/dir", :log_tag => "jgit[web2.0 app]")
     fetch_command2 = "git fetch opscode --tags"
     expect(@provider).to receive(:shell_out!).with(fetch_command2, :cwd => "/my/deploy/dir", :log_tag => "jgit[web2.0 app]")
-    fetch_command3 = "git reset --hard d35af14d41ae22b19da05d7d03a0bafc321b244c"
+    fetch_command3 = "git fetch opscode d35af14d41ae22b19da05d7d03a0bafc321b244c"
     expect(@provider).to receive(:shell_out!).with(fetch_command3, :cwd => "/my/deploy/dir", :log_tag => "jgit[web2.0 app]")
+    fetch_command4 = "git reset --hard d35af14d41ae22b19da05d7d03a0bafc321b244c"
+    expect(@provider).to receive(:shell_out!).with(fetch_command4, :cwd => "/my/deploy/dir", :log_tag => "jgit[web2.0 app]")
     @provider.fetch_updates
   end
 
