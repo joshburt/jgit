@@ -152,6 +152,9 @@ class Chef
 
           Chef::Log.info "#{@new_resource} cloning repo #{@new_resource.repository} to #{cwd}"
           git clone_cmd
+
+          Chef::Log.info "#{@new_resource} fetching #{target_revision} of repo #{@new_resource.repository} to #{cwd} due to depth usage."
+          git("fetch", @new_resource.remote, target_revision, cwd: cwd)  if @new_resource.depth
         end
       end
 
@@ -185,7 +188,7 @@ class Chef
           Chef::Log.debug "Fetching updates from #{new_resource.remote} and resetting to revision #{target_revision}"
           git("fetch", @new_resource.remote, cwd: cwd)
           git("fetch", @new_resource.remote, "--tags", cwd: cwd)
-          git("fetch", @new_resource.remote, target_revision, cwd: cwd)
+          git("fetch", @new_resource.remote, target_revision, cwd: cwd)  if @new_resource.depth
           git("reset", "--hard", target_revision, cwd: cwd)
         end
       end
@@ -322,7 +325,7 @@ class Chef
 
       def git(*args, **run_opts)
         git_command = ["git", args].compact.join(" ")
-        Chef::Log.debug "running #{git_command}"
+        Chef::Log.info "running #{git_command}"
         shell_out!(git_command, run_options(run_opts))
       end
 
