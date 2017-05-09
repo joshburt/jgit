@@ -186,6 +186,9 @@ class Chef
           if new_resource.depth
             # then perform a shallow update ..
             exit_code = 1
+            current_depth = 1
+            last_depth = 0
+            tmp_depth = 0
             depth = new_resource.depth
             while(exit_code != 0)
               git("fetch", new_resource.remote, target_revision, "--depth", depth.to_s, cwd: cwd, returns: [0, 1])
@@ -194,8 +197,11 @@ class Chef
               exit_code = git_cmd_status.exitstatus
               case exit_code
                 when 128
-                  Chef::Log.info 'Failed to fetch enough history to checkout, deepening by 1 ..'
-                  depth += 1
+                  tmp_depth = current_depth
+                  current_depth += last_depth
+                  last_depth = tmp_depth
+                  depth = new_resource.depth + current_depth
+                  Chef::Log.info "Failed to fetch enough history to checkout, deepening by #{current_depth} .."
               end
             end
           else
