@@ -160,7 +160,30 @@ class Chef
 
         converge_by("checkout ref #{sha_ref} branch #{new_resource.revision}") do
           # checkout into a local branch rather than a detached HEAD
-          git("branch", "-f", new_resource.checkout_branch, sha_ref, cwd: cwd)
+          if new_resource.depth
+            # then a depth was specified..
+            exit_code = 1
+            current_depth = 1
+            last_depth = 0
+            tmp_depth = 0
+            depth = new_resource.depth
+            while(exit_code != 0)
+              git("fetch", new_resource.remote, target_revision, "--depth", depth.to_s, cwd: cwd, returns: [0, 1])
+              git("fetch", new_resource.remote, "--tags", "--depth", depth.to_s, cwd: cwd, returns: [0, 1])
+              git_cmd_status = git("branch", "-f", new_resource.checkout_branch, sha_ref, cwd: cwd, returns: [0, 1, 128])
+              exit_code = git_cmd_status.exitstatus
+              case exit_code
+                when 128
+                  tmp_depth = current_depth
+                  current_depth += last_depth
+                  last_depth = tmp_depth
+                  depth = new_resource.depth + current_depth
+                  Chef::Log.info "Failed to fetch enough history to checkout, deepening by #{current_depth} .."
+              end
+            end
+          else
+            git("branch", "-f", new_resource.checkout_branch, sha_ref, cwd: cwd)
+          end
           git("checkout", new_resource.checkout_branch, cwd: cwd)
           Chef::Log.info "#{new_resource} checked out branch: #{new_resource.revision} onto: #{new_resource.checkout_branch} reference: #{sha_ref}"
         end
