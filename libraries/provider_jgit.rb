@@ -148,10 +148,6 @@ class Chef
 
           Chef::Log.info "#{new_resource} cloning repo #{new_resource.repository} to #{cwd}"
           git clone_cmd
-
-          ## TODO: Initial fetch fix attempt
-          # Chef::Log.info "#{new_resource} fetching #{target_revision} of repo #{new_resource.repository} to #{cwd} due to depth usage."
-          # git("fetch", new_resource.remote, target_revision, "--depth", new_resource.depth.to_s, cwd: cwd)  if new_resource.depth
         end
       end
 
@@ -165,20 +161,18 @@ class Chef
             exit_code = 1
             current_depth = 1
             last_depth = 0
-            tmp_depth = 0
             depth = new_resource.depth
-            while(exit_code != 0)
-              git("fetch", new_resource.remote, target_revision, "--depth", depth.to_s, cwd: cwd, returns: [0, 1])
-              git("fetch", new_resource.remote, "--tags", "--depth", depth.to_s, cwd: cwd, returns: [0, 1])
-              git_cmd_status = git("branch", "-f", new_resource.checkout_branch, sha_ref, cwd: cwd, returns: [0, 1, 128])
-              exit_code = git_cmd_status.exitstatus
-              case exit_code
-                when 128
-                  tmp_depth = current_depth
-                  current_depth += last_depth
-                  last_depth = tmp_depth
-                  depth = new_resource.depth + current_depth
-                  Chef::Log.info "Failed to fetch enough history to checkout, deepening by #{current_depth} .."
+            while(exit_code != 0 && current_depth < 10)
+              git_fetch_result = git("fetch", new_resource.remote, "--depth", depth.to_s, cwd: cwd, returns: [0, 1])
+              git_fetch_tags_result = git("fetch", new_resource.remote, "--tags", "--depth", depth.to_s, cwd: cwd, returns: [0, 1])
+              git_force_branch_result = git("branch", "-f", new_resource.checkout_branch, sha_ref, cwd: cwd, returns: [0, 128])
+              exit_code = git_fetch_result.exitstatus | git_fetch_tags_result.exitstatus | git_force_branch_result.exitstatus
+              if exit_code > 0
+                tmp_depth = current_depth
+                current_depth += last_depth
+                last_depth = tmp_depth
+                depth = new_resource.depth + current_depth
+                Chef::Log.info "Failed to fetch enough history to checkout, deepening by #{current_depth} .."
               end
             end
           else
@@ -211,20 +205,19 @@ class Chef
             exit_code = 1
             current_depth = 1
             last_depth = 0
-            tmp_depth = 0
             depth = new_resource.depth
-            while(exit_code != 0)
-              git("fetch", new_resource.remote, target_revision, "--depth", depth.to_s, cwd: cwd, returns: [0, 1])
-              git("fetch", new_resource.remote, "--tags", "--depth", depth.to_s, cwd: cwd, returns: [0, 1])
-              git_cmd_status = git("reset", "--hard", target_revision, cwd: cwd, returns: [0, 1, 128])
-              exit_code = git_cmd_status.exitstatus
-              case exit_code
-                when 128
-                  tmp_depth = current_depth
-                  current_depth += last_depth
-                  last_depth = tmp_depth
-                  depth = new_resource.depth + current_depth
-                  Chef::Log.info "Failed to fetch enough history to checkout, deepening by #{current_depth} .."
+            while(exit_code != 0 && current_depth < 10)
+              git_fetch_specific_ref_result = git("fetch", new_resource.remote, target_revision, cwd: cwd, returns: [0, 1])
+              git_fetch_with_depth_result = git("fetch", new_resource.remote, "--depth", depth.to_s, cwd: cwd, returns: [0, 1])
+              git_fetch_tags_result = git("fetch", new_resource.remote, "--tags", "--depth", depth.to_s, cwd: cwd, returns: [0, 1])
+              git_hard_reset_result = git("reset", "--hard", target_revision, cwd: cwd, returns: [0, 128])
+              exit_code = git_fetch_specific_ref_result.exitstatus | git_fetch_with_depth_result.exitstatus | git_fetch_tags_result.exitstatus | git_hard_reset_result.exitstatus
+              if exit_code > 0
+                tmp_depth = current_depth
+                current_depth += last_depth
+                last_depth = tmp_depth
+                depth = new_resource.depth + current_depth
+                Chef::Log.info "Failed to fetch enough history to checkout, deepening by #{current_depth} .."
               end
             end
           else
