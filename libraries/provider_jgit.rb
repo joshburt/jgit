@@ -78,7 +78,7 @@ class Chef
           enable_submodules
           add_remotes
         else
-          Chef::Log.info "#{new_resource} checkout destination #{cwd} already exists or is a non-empty directory"
+          Chef::Log.debug "#{new_resource} checkout destination #{cwd} already exists or is a non-empty directory"
         end
       end
 
@@ -91,7 +91,7 @@ class Chef
 
       def action_sync
         if existing_git_clone?
-          Chef::Log.info "#{new_resource} current revision: #{current_resource.revision} target revision: #{target_revision}"
+          Chef::Log.debug "#{new_resource} current revision: #{current_resource.revision} target revision: #{target_revision}"
           unless current_revision_matches_target_revision?
             fetch_updates
             enable_submodules
@@ -116,7 +116,7 @@ class Chef
       end
 
       def find_current_revision
-        Chef::Log.info("#{new_resource} finding current git revision")
+        Chef::Log.debug("#{new_resource} finding current git revision")
         if ::File.exist?(::File.join(cwd, ".git"))
           # 128 is returned when we're not in a git repo. this is fine
           result = git("rev-parse", "HEAD", cwd: cwd, returns: [0, 128]).stdout.strip
@@ -162,7 +162,7 @@ class Chef
             current_depth = 1
             last_depth = 0
             depth = new_resource.depth
-            while(exit_code != 0 && current_depth < 10)
+            while (exit_code != 0 && current_depth < 50)
               git_fetch_result = git("fetch", new_resource.remote, "--depth", depth.to_s, cwd: cwd, returns: [0, 1])
               git_fetch_tags_result = git("fetch", new_resource.remote, "--tags", "--depth", depth.to_s, cwd: cwd, returns: [0, 1])
               git_force_branch_result = git("branch", "-f", new_resource.checkout_branch, sha_ref, cwd: cwd, returns: [0, 128])
@@ -206,7 +206,7 @@ class Chef
             current_depth = 1
             last_depth = 0
             depth = new_resource.depth
-            while(exit_code != 0 && current_depth < 10)
+            while (exit_code != 0 && current_depth < 50)
               git_fetch_specific_ref_result = git("fetch", new_resource.remote, target_revision, cwd: cwd, returns: [0, 1])
               git_fetch_with_depth_result = git("fetch", new_resource.remote, "--depth", depth.to_s, cwd: cwd, returns: [0, 1])
               git_fetch_tags_result = git("fetch", new_resource.remote, "--tags", "--depth", depth.to_s, cwd: cwd, returns: [0, 1])
@@ -230,7 +230,7 @@ class Chef
 
       def setup_remote_tracking_branches(remote_name, remote_url)
         converge_by("set up remote tracking branches for #{remote_url} at #{remote_name}") do
-          Chef::Log.info "#{new_resource} configuring remote tracking branches for repository #{remote_url} " + "at remote #{remote_name}"
+          Chef::Log.debug "#{new_resource} configuring remote tracking branches for repository #{remote_url} " + "at remote #{remote_name}"
           check_remote_command = ["config", "--get", "remote.#{remote_name}.url"]
           remote_status = git(check_remote_command, cwd: cwd, returns: [0, 1, 2])
           case remote_status.exitstatus
@@ -274,7 +274,7 @@ class Chef
       alias :revision_slug :target_revision
 
       def remote_resolve_reference
-        Chef::Log.info("#{new_resource} resolving remote reference")
+        Chef::Log.debug("#{new_resource} resolving remote reference")
         # The sha pointed to by an annotated tag is identified by the
         # '^{}' suffix appended to the tag. In order to resolve
         # annotated tags, we have to search for "revision*" and
@@ -360,7 +360,7 @@ class Chef
 
       def git(*args, **run_opts)
         git_command = ["git", args].compact.join(" ")
-        Chef::Log.info "running #{git_command}"
+        Chef::Log.debug "running #{git_command}"
         shell_out!(git_command, run_options(run_opts))
       end
 
